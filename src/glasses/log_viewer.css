@@ -1,0 +1,34 @@
+Output {
+    width: 100%;
+    height: 100%;
+    background: yellow;
+
+}
+
+NameSpacesView {
+    width: 100%;
+    background: red;
+    /* height: 100%; */
+}
+
+LogControl {
+    dock: top;
+}
+
+InputWithLabel {
+    height: auto;
+}
+
+InputWithLabel Label {
+    width: 40%;
+}
+
+InputWithLabel Input {
+    width: 50%;
+    height: auto;
+}
+
+LogOutput {
+    height: 100%;
+    /* background: yellow; */
+}
