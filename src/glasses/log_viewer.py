@@ -72,6 +72,12 @@ class LogOutput(Static):
             # self.refresh()
 
 
+class LogViewer(Static):
+    def compose(self) -> ComposeResult:
+        yield LogControl(id="logcontrol")
+        yield LogOutput()
+
+
 class Viewer(App):
     """An app to view logging."""
 
@@ -81,8 +87,7 @@ class Viewer(App):
     ]
 
     def compose(self) -> ComposeResult:
-        yield LogControl(id="logcontrol")
-        yield LogOutput()
+        yield LogViewer()
         yield Footer()
 
     def action_toggle_dark(self) -> None:

@@ -53,7 +53,7 @@ class DummyLogReader(LogReader):
 
     @staticmethod
     def log_data() -> Iterator:
-        with open(Path(__file__).parent.parent / "tests" / "log_data.txt") as fl:
+        with open(Path(__file__).parent.parent.parent / "tests" / "log_data.txt") as fl:
             data = fl.read().split("\n")
         return cycle(data)
 

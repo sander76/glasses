@@ -1,4 +1,4 @@
-#sidebar {
+SideBar {
     dock: left;
     width: 30;
     height: 100%;
@@ -7,11 +7,15 @@
 }
 
 
-Output {
+LogViewer {
     width: 100%;
     height: 100%;
-    /* background: yellow; */
+    background: yellow;
 
+}
+
+LogOutput {
+    height: 100%;
 }
 
 NameSpacesView {
@@ -32,9 +36,3 @@ InputWithLabel Input {
     width: 50%;
     height: auto;
 }
-
-/* 
-#treeview {
-    height: auto;
-    width: 100%;
-} */

@@ -1,12 +1,12 @@
 from functools import cache
 
 from glasses.log_provider import DummyLogReader, LogReader
-from glasses.namespace_provider import DummyNameSpaceProvider, NameSpaceProvider
+from glasses.namespace_provider import DummyClustere, Cluster
 from glasses.settings import logcollectors, logparsers, settings
 
 
-def get_name_space_provider() -> NameSpaceProvider:
-    return DummyNameSpaceProvider()
+def get_cluster() -> Cluster:
+    return DummyClustere(name="default provider", parent=None)
 
 
 @cache

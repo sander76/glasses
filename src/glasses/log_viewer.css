@@ -1,16 +1,3 @@
-Output {
-    width: 100%;
-    height: 100%;
-    background: yellow;
-
-}
-
-NameSpacesView {
-    width: 100%;
-    background: red;
-    /* height: 100%; */
-}
-
 LogControl {
     dock: top;
 }
@@ -30,5 +17,8 @@ InputWithLabel Input {
 
 LogOutput {
     height: 100%;
-    /* background: yellow; */
+}
+
+LogViewer {
+    height: 100%;
 }
