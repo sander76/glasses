@@ -18,18 +18,31 @@ class LogEvent:
 
 
 class LogReader:
+    def __init__(self) -> None:
+        self.namespace: str = "no namespace"
+        self.pod: str = "no pod"
+
+    # @property
+    # def namespace(self):
+    #     return self._namespace
+
+    # @property
+    # def pod(self):
+    #     return self._pod
+
     async def read(self) -> AsyncIterator[LogEvent]:
         raise NotImplementedError()
 
-    def start(self):
+    def start(self, namespace: str, pod: str) -> asyncio.Task:
         raise NotImplementedError()
 
-    def stop(self):
+    def stop(self) -> None:
         raise NotImplementedError()
 
 
 class DummyLogReader(LogReader):
     def __init__(self) -> None:
+        super().__init__()
         self._reader: asyncio.Task | None = None
         self._stream: asyncio.Queue[str] = asyncio.Queue()
         self._parser = jsonparse
@@ -47,7 +60,7 @@ class DummyLogReader(LogReader):
             else:
                 yield LogEvent(raw=JSON(data), parsed=parsed)
 
-    def start(self):
+    def start(self, namespace: str, pod: str) -> asyncio.Task:
         self._reader = asyncio.create_task(self._read())
         return self._reader
 
@@ -57,7 +70,7 @@ class DummyLogReader(LogReader):
             data = fl.read().split("\n")
         return cycle(data)
 
-    async def _read(self):
+    async def _read(self) -> None:
 
         try:
             for line in self.log_data():

@@ -1,8 +1,9 @@
 import asyncio
 
 from textual.app import App, ComposeResult
-from textual.containers import Vertical
-from textual.widgets import Button, Footer, Label, ListItem, ListView, Static
+from textual.containers import Horizontal, Vertical
+from textual.reactive import reactive
+from textual.widgets import Button, Footer, Input, Label, ListItem, ListView, Static
 
 from glasses.dependencies import get_log_reader
 from glasses.log_provider import LogEvent
@@ -10,10 +11,40 @@ from glasses.settings import settings
 from glasses.widgets.input_with_label import InputWithLabel
 
 
-class LogControl(Static):
+class LogControl(Vertical):
+    DEFAULT_CSS = """
+    .small_input {
+        height: 1;
+        border: none;
+        background: blue;
+        width: 50;
+    }
+    .small_input:focus {
+        border: none;
+    }
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._reader = get_log_reader(settings.logcollector)
+
+    # should this be done with reactive properties ?
+    # I am not sure how to do reactive in combination with some kind
+    # of MVC pattern. So for now I do a manual update of the UI when an
+    # external change of the model is done.
+    def update_ui(self):
+        self.query_one("#namespace").value = self._reader.namespace
+        self.query_one("#pod_name").value = self._reader.pod
+
     def compose(self) -> ComposeResult:
-        yield InputWithLabel(id="namespace", label_text="namespace")
-        yield InputWithLabel(id="resource_name", label_text="resource name")
+        yield Horizontal(
+            Label("namespace: "),
+            Input(self._reader.namespace, id="namespace", classes="small_input"),
+        )
+        yield Horizontal(
+            Label("pod name: "),
+            Input(self._reader.pod, id="pod_name", classes="small_input"),
+        )
         yield Button("log", id="startlog")
         yield Button("stop", id="stoplog")
 
@@ -21,9 +52,15 @@ class LogControl(Static):
         reader = get_log_reader(settings.logcollector)
 
         if event.button.id == "startlog":
-            reader.start()
+            reader.start(self._reader.namespace, pod=self._reader.pod)
         elif event.button.id == "stoplog":
             reader.stop()
+
+    async def on_input_changed(self, event: Input.Changed):
+        if event.input.id == "namespace":
+            self._reader.namespace = event.input.value
+        elif event.input.id == "pod_name":
+            self._reader.pod = event.input.value
 
 
 class LogItem(ListItem):
@@ -50,13 +87,12 @@ class LogItem(ListItem):
         self.expanded = not self.expanded
 
 
-class LogOutput(Static):
+class LogOutput(Vertical):
     BINDINGS = [("x", "expand", "Expand")]
 
     def action_expand(self):
         item = self.list_view.highlighted_child
         item.toggle(not item.expanded)
-        self.list_view
 
     def compose(self) -> ComposeResult:
         self.list_view = ListView()
@@ -69,7 +105,19 @@ class LogOutput(Static):
         reader = get_log_reader(settings.logcollector)
         async for line in reader.read():
             self.list_view.append(LogItem(line))
-            # self.refresh()
+
+
+class LogViewer(Static):
+    def __init__(self) -> None:
+        super().__init__()
+        self._log_control = LogControl()
+
+    def compose(self) -> ComposeResult:
+        yield self._log_control
+        yield LogOutput()
+
+    def update_ui(self):
+        self._log_control.update_ui()
 
 
 class LogViewer(Static):

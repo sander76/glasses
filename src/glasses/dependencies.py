@@ -1,12 +1,12 @@
 from functools import cache
 
+from glasses.k8client import BaseClient, DummyClient
 from glasses.log_provider import DummyLogReader, LogReader
-from glasses.namespace_provider import DummyClustere, Cluster
 from glasses.settings import logcollectors, logparsers, settings
 
 
-def get_cluster() -> Cluster:
-    return DummyClustere(name="default provider", parent=None)
+def get_k8_client() -> BaseClient:
+    return DummyClient()
 
 
 @cache
