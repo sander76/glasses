@@ -1,9 +1,9 @@
-import abc
 import asyncio
 from itertools import cycle
 from pathlib import Path
-from typing import Any, AsyncGenerator, AsyncIterator, Coroutine, Iterator
+from typing import AsyncIterator, Iterator
 
+from kubernetes import client, config, watch  # type: ignore
 from rich.json import JSON
 from rich.text import Text
 
@@ -18,22 +18,11 @@ class LogEvent:
 
 
 class LogReader:
-    async def read(self) -> AsyncIterator[LogEvent]:
-        raise NotImplementedError()
-
-    def start(self):
-        raise NotImplementedError()
-
-    def stop(self):
-        raise NotImplementedError()
-
-
-class DummyLogReader(LogReader):
     def __init__(self) -> None:
-        self._reader: asyncio.Task | None = None
+        self.namespace: str = "no namespace"
+        self.pod: str = "no pod"
         self._stream: asyncio.Queue[str] = asyncio.Queue()
         self._parser = jsonparse
-        self.delay: float = 0.2
 
     async def read(self) -> AsyncIterator[LogEvent]:
         while True:
@@ -47,7 +36,20 @@ class DummyLogReader(LogReader):
             else:
                 yield LogEvent(raw=JSON(data), parsed=parsed)
 
-    def start(self):
+    def start(self, namespace: str, pod: str) -> asyncio.Task:
+        raise NotImplementedError()
+
+    def stop(self) -> None:
+        raise NotImplementedError()
+
+
+class DummyLogReader(LogReader):
+    def __init__(self) -> None:
+        super().__init__()
+        self._reader: asyncio.Task | None = None
+        self.delay: float = 0.2
+
+    def start(self, namespace: str, pod: str) -> asyncio.Task:
         self._reader = asyncio.create_task(self._read())
         return self._reader
 
@@ -57,7 +59,7 @@ class DummyLogReader(LogReader):
             data = fl.read().split("\n")
         return cycle(data)
 
-    async def _read(self):
+    async def _read(self) -> None:
 
         try:
             for line in self.log_data():
@@ -70,3 +72,67 @@ class DummyLogReader(LogReader):
     def stop(self) -> None:
         if self._reader:
             self._reader.cancel()
+
+
+class K8LogReader(LogReader):
+    def __init__(self) -> None:
+        super().__init__()
+        self._config = config.load_config()
+        self._client = client.CoreV1Api()
+        self._reader: asyncio.Task | None = None
+
+    async def _read(self) -> None:
+        loop = asyncio.get_running_loop()
+
+        def _get_log():
+            w = watch.Watch()
+            try:
+                for e in w.stream(
+                    self._client.read_namespaced_pod_log,
+                    name=self.pod,
+                    namespace=self.namespace,
+                    tail_lines=50,
+                ):
+                    asyncio.run_coroutine_threadsafe(self._stream.put(e), loop=loop)
+            except Exception as err:
+                return err
+
+        result = await asyncio.to_thread(_get_log)
+        print(result)
+
+    def start(self, namespace: str, pod: str) -> asyncio.Task:
+        self.namespace = namespace
+        self.pod = pod
+        self._reader = asyncio.create_task(self._read())
+        return self._reader
+
+    def stop(self):
+        if self._reader:
+            self._reader.cancel()
+
+
+if __name__ == "__main__":
+    # config.load_config()
+    # _client = client.CoreV1Api()
+
+    # w = watch.Watch()
+
+    # for e in w.stream(
+    #     _client.read_namespaced_pod_log,
+    #     name="grid-insight-job-service-5d7fb988f6-rgtmh",
+    #     namespace="ogi-kcn-acc",
+    #     tail_lines=10,
+    # ):
+    #     print(e)
+
+    logreader = K8LogReader()
+
+    async def run():
+        async def read():
+            async for line in logreader.read():
+                print(line)
+
+        logreader.start("ogi-kcn-acc", "grid-insight-job-service-5d7fb988f6-rgtmh")
+        await read()
+
+    asyncio.run(run())

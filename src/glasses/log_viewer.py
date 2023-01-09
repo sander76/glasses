@@ -1,35 +1,74 @@
 import asyncio
 
-from textual.app import App, ComposeResult
-from textual.containers import Vertical
-from textual.widgets import Button, Footer, Label, ListItem, ListView, Static
+from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
-from glasses.dependencies import get_log_reader
-from glasses.log_provider import LogEvent
-from glasses.settings import settings
-from glasses.widgets.input_with_label import InputWithLabel
+from glasses.log_provider import LogEvent, LogReader
 
 
-class LogControl(Static):
+class LogControl(Vertical):
+    DEFAULT_CSS = """
+    .small_input {
+        height: 1;
+        border: none;
+        background: blue;
+        width: 50;
+    }
+    .small_input:focus {
+        border: none;
+    }
+    """
+
+    def __init__(self, reader: LogReader) -> None:
+        super().__init__()
+        self._reader = reader
+
+    # should this be done with reactive properties ?
+    # I am not sure how to do reactive in combination with some kind
+    # of MVC pattern. So for now I do a manual update of the UI when an
+    # external change of the model is done.
+    def update_ui(self):
+        self.query_one("#namespace").value = self._reader.namespace
+        self.query_one("#pod_name").value = self._reader.pod
+
     def compose(self) -> ComposeResult:
-        yield InputWithLabel(id="namespace", label_text="namespace")
-        yield InputWithLabel(id="resource_name", label_text="resource name")
+        yield Horizontal(
+            Label("namespace: "),
+            Input(self._reader.namespace, id="namespace", classes="small_input"),
+        )
+        yield Horizontal(
+            Label("pod name: "),
+            Input(self._reader.pod, id="pod_name", classes="small_input"),
+        )
         yield Button("log", id="startlog")
         yield Button("stop", id="stoplog")
 
     async def on_button_pressed(self, event: Button.Pressed):
-        reader = get_log_reader(settings.logcollector)
 
         if event.button.id == "startlog":
-            reader.start()
+            self._reader.start(self._reader.namespace, pod=self._reader.pod)
         elif event.button.id == "stoplog":
-            reader.stop()
+            self._reader.stop()
+
+    async def on_input_changed(self, event: Input.Changed):
+        if event.input.id == "namespace":
+            self._reader.namespace = event.input.value
+        elif event.input.id == "pod_name":
+            self._reader.pod = event.input.value
 
 
 class LogItem(ListItem):
+    DEFAULT_CSS = """
+    LogItem {
+        width: auto;
+
+    }
+    """
+
     def __init__(self, log_item: LogEvent, *args, **kwargs) -> None:
 
-        super().__init__(Vertical(Label(log_item.parsed)), *args, **kwargs)
+        super().__init__(Label(log_item.parsed), *args, **kwargs)
         self._log_item = log_item
         self.expanded: bool = False
         self._expand_data: Label | None = None
@@ -45,18 +84,32 @@ class LogItem(ListItem):
             # setting visibility to False does hide the expanded
             # data, but it does not resize the list item to remove the empty
             # space. This seems like a bug.
-            self._expand_data.visible = False
+            if self._expand_data:
+                self._expand_data.visible = False
 
         self.expanded = not self.expanded
 
 
-class LogOutput(Static):
+class LogOutput(Vertical):
     BINDINGS = [("x", "expand", "Expand")]
+
+    DEFAULT_CSS = """
+    LogOutput {
+        width: 100%;
+        height: 100%;
+    }
+    ListView {
+        overflow-x: scroll;
+    }
+    """
+
+    def __init__(self, reader: LogReader) -> None:
+        super().__init__()
+        self._reader = reader
 
     def action_expand(self):
         item = self.list_view.highlighted_child
         item.toggle(not item.expanded)
-        self.list_view
 
     def compose(self) -> ComposeResult:
         self.list_view = ListView()
@@ -66,34 +119,20 @@ class LogOutput(Static):
         asyncio.create_task(self._watch_log())
 
     async def _watch_log(self):
-        reader = get_log_reader(settings.logcollector)
-        async for line in reader.read():
-            self.list_view.append(LogItem(line))
-            # self.refresh()
+        async for line in self._reader.read():
+            log_item = LogItem(line)
+            self.list_view.append(log_item)
 
 
 class LogViewer(Static):
-    def compose(self) -> ComposeResult:
-        yield LogControl(id="logcontrol")
-        yield LogOutput()
-
-
-class Viewer(App):
-    """An app to view logging."""
-
-    CSS_PATH = "log_viewer.css"
-    BINDINGS = [
-        ("d", "toggle_dark", "Toggle dark mode"),
-    ]
+    def __init__(self, reader: LogReader) -> None:
+        super().__init__()
+        self.reader = reader
+        self._log_control = LogControl(reader)
 
     def compose(self) -> ComposeResult:
-        yield LogViewer()
-        yield Footer()
+        yield self._log_control
+        yield LogOutput(self.reader)
 
-    def action_toggle_dark(self) -> None:
-        self.dark = not self.dark
-
-
-if __name__ == "__main__":
-    app = Viewer()
-    app.run()
+    def update_ui(self):
+        self._log_control.update_ui()

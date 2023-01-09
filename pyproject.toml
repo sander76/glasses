@@ -7,14 +7,15 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-textual = ">=0.8.0"
+textual = "^0.9.1"
 pydantic = "^1.10.2"
+kubernetes = "^25.3.0"
 
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^6.0.0"
 mypy = "^0.991"
-ruff = "^0.0.191"
+ruff = "^0.0.217"
 black = "^22.12.0"
 textual = { extras = ["dev"], version = ">=0.8.0" }
 pytest-asyncio = "^0.20.3"
@@ -27,14 +28,14 @@ isort = "^5.11.4"
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = [
-    "poetry-core",
+  "poetry-core",
 ]
 
 [tool.ruff]
 ignore = ['E501']
 [tool.ruff.per-file-ignores]
 'src/glasses/log_parser.py' = ['E999']
-
+'src/glasses/dependencies.py' = ['E999']
 
 [tool.isort]
 profile = "black"

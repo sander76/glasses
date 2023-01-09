@@ -7,7 +7,6 @@ from typing import Any
 from rich import print
 from rich.text import Text
 
-
 # default UTC time based ecs timestamp.
 TEXT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 # 2022-12-27T11:04:22.329Z
@@ -62,7 +61,7 @@ def jsonparse(input: str) -> Text:
 def _parse(_js: dict[Any, Any]) -> Text:
     parsed_items: dict[str, Text] = defaultdict(Text)
     for key, value in _js.items():
-        match key:
+        match key:  # noqa
             case "@timestamp":
                 parsed_items[key] = _time(value)
             case "log.level":

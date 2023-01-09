@@ -1,21 +1,28 @@
 from functools import cache
 
-from glasses.log_provider import DummyLogReader, LogReader
-from glasses.namespace_provider import DummyClustere, Cluster
-from glasses.settings import logcollectors, logparsers, settings
-
-
-def get_cluster() -> Cluster:
-    return DummyClustere(name="default provider", parent=None)
+from glasses.k8client import DummyClient, K8Client
+from glasses.log_provider import DummyLogReader, K8LogReader, LogReader
+from glasses.namespace_provider import Cluster
+from glasses.settings import LogCollectors, NameSpaceProvider, settings
 
 
 @cache
-def get_log_reader(logcollector: logcollectors) -> LogReader:
-    if logcollector == "DummyLogReader":
-        return DummyLogReader()
+def get_namespace_provider(namespace: NameSpaceProvider) -> Cluster:
+    match namespace:  # noqa
+        case NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER:
+            return Cluster("dummy provider", DummyClient())
+        case NameSpaceProvider.K8_NAMESPACE_PROVIDER:
+            return Cluster("k8", K8Client())
+
+    raise NotImplementedError(f"Unknown namespace provider {namespace}")
+
+
+@cache
+def get_log_reader(logcollector: LogCollectors) -> LogReader:
+    match logcollector:  # noqa
+        case LogCollectors.DUMMY_LOG_COLLECTOR:
+            return DummyLogReader()
+        case LogCollectors.K8_LOG_COLLECTOR:
+            return K8LogReader()
+
     raise NotImplementedError(f"unknown logreader {settings.logcollector}")
-
-
-@cache
-def get_log_parser(logparser: logparsers):
-    pass

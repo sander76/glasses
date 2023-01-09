@@ -1,17 +1,30 @@
-from abc import ABC, abstractmethod, abstractproperty
-from typing import Generic, TypeVar, Union
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from enum import Enum, unique
+from typing import TYPE_CHECKING, Generic, TypeVar
+
+# from pydantic import BaseModel
+if TYPE_CHECKING:
+    from glasses.k8client import BaseClient
 
 ItemType = TypeVar("ItemType")
 
 
+@unique
+class Commands(Enum):
+    VIEW_LOG = "view log"
+
+
 class BaseK8(ABC, Generic[ItemType]):
-    def __init__(self, name: str, parent: Union["BaseK8", None]) -> None:
+    def __init__(self, name: str, client: BaseClient) -> None:
         self.name = name
         self._items: dict[str, ItemType] = {}
-        self.parent = parent
+        self._client = client
+        self.commands: set[Commands] = set()
 
     @abstractmethod
-    async def refresh(self):
+    async def refresh(self) -> dict[str, ItemType]:
         """Refresh this resource."""
 
     @property
@@ -24,42 +37,30 @@ class BaseK8(ABC, Generic[ItemType]):
 
 
 class Pod(BaseK8[str]):
-    def __init__(self, name: str, parent: "NameSpace"):
-        super().__init__(name, parent=parent)
-        self.commands: list[str] = ["log"]
+    def __init__(self, name: str, namespace: str, client: BaseClient) -> None:
+        self.namespace = namespace
+        super().__init__(name, client)
+        self.commands = {Commands.VIEW_LOG}
 
     async def refresh(self):
-        pass
+        return self.items
 
 
 class NameSpace(BaseK8[Pod]):
     """A k8s namespace"""
 
+    async def refresh(self) -> dict[str, Pod]:
+        self._items = await self._client.get_resources(self.name)
+        return self._items
+
 
 class Cluster(BaseK8[NameSpace]):
     """A k8s cluster"""
 
+    def __init__(self, name: str, client: BaseClient) -> None:
+        super().__init__(name, client=client)
 
-class DummyPod(Pod):
-    ...
-    # async def refresh(self) -> list[str]:
-    #     await asyncio.sleep(1)
-    #     return ["log"]
-
-
-class DummyNameSpace(NameSpace):
-    async def refresh(self) -> dict[str, Pod]:
-        self._items = {
-            "pod_1": DummyPod(name="pod_1", parent=self),
-            "pod_2": DummyPod(name="pod_2", parent=self),
-        }
-        return self._items
-
-
-class DummyClustere(Cluster):
     async def refresh(self) -> dict[str, NameSpace]:
-        self._items = {
-            "namespace 1": DummyNameSpace(name="namespace_1", parent=self),
-            "namespace_2": DummyNameSpace(name="namespace_2", parent=self),
-        }
+        data = await self._client.get_namespaces()
+        self._items = data
         return self._items
