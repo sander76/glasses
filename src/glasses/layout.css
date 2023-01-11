@@ -23,7 +23,6 @@ LogControl {
 LogViewer {
     width: 100%;
     height: 100%;
-    /* background: yellow; */
 
 }
 
@@ -42,6 +41,4 @@ Button {
 
 NameSpacesView {
     width: 100%;
-    background: red;
-    /* height: 100%; */
 }

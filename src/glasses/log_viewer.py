@@ -62,7 +62,7 @@ class LogItem(ListItem):
     DEFAULT_CSS = """
     LogItem {
         width: auto;
-
+        background: $background;
     }
     """
 
@@ -98,8 +98,9 @@ class LogOutput(Vertical):
         width: 100%;
         height: 100%;
     }
-    ListView {
+    LogOutput ListView {
         overflow-x: scroll;
+        background: $background;
     }
     """
 

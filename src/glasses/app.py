@@ -1,28 +1,19 @@
+import argparse
 from typing import TypeVar
 
 from textual.app import App, ComposeResult
-from textual.message import Message, MessageTarget
 from textual.widget import Widget
 from textual.widgets import Footer
 
 from glasses import dependencies
 from glasses.log_viewer import LogViewer
-from glasses.namespace_provider import BaseK8, Cluster, Commands, NameSpace, Pod
+from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
 from glasses.nested_list_view import SlideView
 from glasses.settings import LogCollectors, NameSpaceProvider, settings
 
 ID_BTN_REFRESH = "refresh"
 
 Provider = TypeVar("Provider", NameSpace, Cluster)
-
-
-class ChangeView(Message):
-    """A message."""
-
-    def __init__(self, sender: MessageTarget, new_data: BaseK8) -> None:
-        super().__init__(sender)
-
-        self.new_data = new_data
 
 
 class SideBar(Widget):
@@ -69,8 +60,20 @@ class Viewer(App):
 
             self._log_viewer.update_ui()
 
+    # async def on_slide_view_command(self, event: SlideView.Command) -> None:
+    #     pass
+
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--demo_mode",
+        help="run this in demo mode.",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
 
-    app = Viewer(demo_mode=False)
+    args = parser.parse_args()
+    demo_mode = args.demo_mode
+    app = Viewer(demo_mode=demo_mode)
     app.run()

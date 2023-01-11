@@ -21,24 +21,22 @@ class UpdateableListView(Widget):
     ) -> None:
         super().__init__()
         self._listview = ListView()
+        self._title = Label("no title")
 
     def compose(self):
+        yield self._title
         yield self._listview
-
-    # async def on_mount(self):
-    #     # await self.action_update_view()
-    #     await self.populate()
-    #     self._listview.focus()
 
     async def update(
         self,
+        title: str,
         items: dict[str, BaseK8],
         commands: set[Commands],
         add_back_navigation: bool = True,
         can_refresh: bool = True,
     ):
+        self._title.update(title)
         await self._listview.clear()
-
         if add_back_navigation:
             self._listview.append(ListItem(Label(" <Back"), id="navigate_back"))
         if can_refresh:
@@ -67,7 +65,11 @@ class SlideView(Widget):
 
     async def update_view(self, refresh: bool = False):
         items = await self.get_items(refresh)
-        await self._updateable_list_view.update(items, self.history[-1].commands)
+        await self._updateable_list_view.update(
+            self.history[-1].name,
+            items,
+            self.history[-1].commands,
+        )
 
     async def get_items(self, refresh: bool = False) -> dict[str, BaseK8]:
         if refresh:
