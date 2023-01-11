@@ -72,5 +72,5 @@ class Viewer(App):
 
 if __name__ == "__main__":
 
-    app = Viewer(demo_mode=True)
+    app = Viewer(demo_mode=False)
     app.run()

@@ -82,23 +82,26 @@ class K8LogReader(LogReader):
         self._reader: asyncio.Task | None = None
 
     async def _read(self) -> None:
-        loop = asyncio.get_running_loop()
-
-        def _get_log():
+        try:
+            loop = asyncio.get_running_loop()
             w = watch.Watch()
-            try:
-                for e in w.stream(
-                    self._client.read_namespaced_pod_log,
-                    name=self.pod,
-                    namespace=self.namespace,
-                    tail_lines=50,
-                ):
-                    asyncio.run_coroutine_threadsafe(self._stream.put(e), loop=loop)
-            except Exception as err:
-                return err
 
-        result = await asyncio.to_thread(_get_log)
-        print(result)
+            def _get_log():
+                try:
+                    for e in w.stream(
+                        self._client.read_namespaced_pod_log,
+                        name=self.pod,
+                        namespace=self.namespace,
+                        tail_lines=50,
+                    ):
+                        asyncio.run_coroutine_threadsafe(self._stream.put(e), loop=loop)
+                except Exception as err:
+                    return err
+
+            result = await asyncio.to_thread(_get_log)
+            print(result)
+        except asyncio.CancelledError:
+            w.stop()
 
     def start(self, namespace: str, pod: str) -> asyncio.Task:
         self.namespace = namespace
