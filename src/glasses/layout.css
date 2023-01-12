@@ -4,7 +4,7 @@ Viewer {
 
 SideBar {
     dock: left;
-    width: 64;
+    /* width: 64; */
     height: 100%;
 
 }

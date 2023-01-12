@@ -2,6 +2,7 @@ import argparse
 from typing import TypeVar
 
 from textual.app import App, ComposeResult
+from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Footer
 
@@ -29,7 +30,13 @@ class Viewer(App):
     """An app to view logging."""
 
     CSS_PATH = "layout.css"
-    BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
+    BINDINGS = [
+        ("d", "toggle_dark", "Toggle dark mode"),
+        ("ctrl+right", "width(1)", "Increase Navigator"),
+        ("ctrl+left", "width(-1)", "Decrease Navigator"),
+    ]
+    sidebar_width = 60
+    sidebar_min_width = 10
 
     def __init__(self, demo_mode=False) -> None:
         super().__init__()
@@ -38,9 +45,12 @@ class Viewer(App):
             settings.namespace_provider = NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER
 
         self._log_viewer = LogViewer(dependencies.get_log_reader(settings.logcollector))
+        self._sidebar = SideBar()
+        self._sidebar.styles.width = self.sidebar_width
 
     def compose(self) -> ComposeResult:
-        yield SideBar()
+        yield self._sidebar
+
         yield self._log_viewer
         yield Footer()
 
@@ -62,6 +72,13 @@ class Viewer(App):
 
     # async def on_slide_view_command(self, event: SlideView.Command) -> None:
     #     pass
+
+    def action_width(self, by_val: int) -> None:
+        if self.sidebar_width > self.sidebar_min_width or by_val > 0:
+            self.sidebar_width += by_val
+            self._sidebar.styles.width = self.sidebar_width
+
+        #     self.grid_width += by_val
 
 
 if __name__ == "__main__":
