@@ -47,5 +47,4 @@ def quality(session):
 def test(session):
     session.run("poetry", "install", "--sync", external=True)
 
-    session.run("pytest", "--ignore=tests/unit", "tests")
-    session.run("pytest", "--cov=grid_insight_data_collector", "tests/unit")
+    session.run("pytest", "tests")
