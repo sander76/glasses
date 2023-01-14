@@ -36,6 +36,7 @@ class UpdateableListView(Widget):
         can_refresh: bool = True,
     ):
         self._title.update(title)
+
         await self._listview.clear()
         if add_back_navigation:
             self._listview.append(ListItem(Label(" <Back"), id="navigate_back"))
@@ -87,6 +88,11 @@ class SlideView(Widget):
         self.history.pop()
         await self.update_view()
 
+    async def _new_view(self, item_id: str):
+        new_view = self.history[-1].items[item_id]
+        self.history.append(new_view)
+        await self.update_view()
+
     async def on_list_view_selected(self, event: ListView.Selected):
         id = event.item.id
         assert isinstance(id, str)
@@ -95,18 +101,22 @@ class SlideView(Widget):
         elif id == "navigate_back":
             await self._navigate_back()
         elif self.history[-1].items and id in self.history[-1].items:
-            new_view = self.history[-1].items[id]
-            self.history.append(new_view)
-            await self.update_view()
+            await self._new_view(id)
         elif Commands[id] in self.history[-1].commands:
             await self.emit(
-                SlideView.Selected(self, data=self.history[-1], id=Commands[id])
+                SlideView.Command(self, data=self.history[-1], id=Commands[id])
             )
         else:
             print("nothing found.")
 
     class Selected(Message):
         def __init__(self, sender: "SlideView", data: BaseK8, id: str) -> None:
+            super().__init__(sender)
+            self.data = data
+            self.id = id
+
+    class Command(Message):
+        def __init__(self, sender: "SlideView", data: BaseK8, id: Commands) -> None:
             super().__init__(sender)
             self.data = data
             self.id = id

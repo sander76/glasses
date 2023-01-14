@@ -2,7 +2,6 @@ import argparse
 from typing import TypeVar
 
 from textual.app import App, ComposeResult
-from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Footer
 
@@ -57,7 +56,7 @@ class Viewer(App):
     def action_toggle_dark(self) -> None:
         self.dark = not self.dark
 
-    async def on_slide_view_selected(self, event: SlideView.Selected) -> None:
+    async def on_slide_view_command(self, event: SlideView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
             log_reader = self._log_viewer.reader
 
@@ -70,15 +69,10 @@ class Viewer(App):
 
             self._log_viewer.update_ui()
 
-    # async def on_slide_view_command(self, event: SlideView.Command) -> None:
-    #     pass
-
     def action_width(self, by_val: int) -> None:
         if self.sidebar_width > self.sidebar_min_width or by_val > 0:
             self.sidebar_width += by_val
             self._sidebar.styles.width = self.sidebar_width
-
-        #     self.grid_width += by_val
 
 
 if __name__ == "__main__":
