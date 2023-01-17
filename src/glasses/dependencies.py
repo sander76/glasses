@@ -8,7 +8,7 @@ from glasses.settings import LogCollectors, NameSpaceProvider, settings
 
 @cache
 def get_namespace_provider(namespace: NameSpaceProvider) -> Cluster:
-    match namespace:  # noqa
+    match namespace:  # noqa type:ignore
         case NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER:
             return Cluster("dummy provider", DummyClient())
         case NameSpaceProvider.K8_NAMESPACE_PROVIDER:

@@ -1,5 +1,11 @@
 Viewer {
     width: 100%;
+    layers: viewer modal;
+    align: center middle;
+}
+
+TheApp {
+    layer: viewer;
 }
 
 SideBar {
