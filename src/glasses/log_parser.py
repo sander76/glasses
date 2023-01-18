@@ -61,19 +61,18 @@ def jsonparse(input: str) -> Text:
 def _parse(_js: dict[Any, Any]) -> Text:
     parsed_items: dict[str, Text] = defaultdict(Text)
     for key, value in _js.items():
-        match key:  # noqa
-            case "@timestamp":
-                parsed_items[key] = _time(value)
-            case "log.level":
-                parsed_items[key] = _level(value)
-            case "message":
-                parsed_items[key] = _message(value)
-            case "logger":
-                parsed_items[key] = _logger(value)
-            case "exception":
-                parsed_items[key] = _parse_exception(value)
-            case _:
-                parsed_items[key] = _parse_general(key, value)
+        if key == "@timestamp":
+            parsed_items[key] = _time(value)
+        elif key == "log.level":
+            parsed_items[key] = _level(value)
+        elif key == "message":
+            parsed_items[key] = _message(value)
+        elif key == "logger":
+            parsed_items[key] = _logger(value)
+        elif key == "exception":
+            parsed_items[key] = _parse_exception(value)
+        else:
+            parsed_items[key] = _parse_general(key, value)
 
     first_values: list[str] = ["@timestamp", "log.level", "message", "logger"]
     last_values: list[str] = ["exception"]

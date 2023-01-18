@@ -91,7 +91,7 @@ class Viewer(App):
         self.mount(HelpView(bindings=self.BINDINGS))
 
 
-def run(argv: Sequence[str] | None = None) -> None:
+def _parse_args(argv: Sequence[str] | None = None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--demo_mode",
@@ -101,6 +101,11 @@ def run(argv: Sequence[str] | None = None) -> None:
     )
 
     args = parser.parse_args(argv)
+    return args
+
+
+def run(argv: Sequence[str] | None = None) -> None:
+    args = _parse_args(argv)
     demo_mode = args.demo_mode
     app = Viewer(demo_mode=demo_mode)
     app.run()
