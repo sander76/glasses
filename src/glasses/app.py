@@ -1,5 +1,5 @@
 import argparse
-from typing import TypeVar
+from typing import Sequence, TypeVar
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -91,7 +91,7 @@ class Viewer(App):
         self.mount(HelpView(bindings=self.BINDINGS))
 
 
-if __name__ == "__main__":
+def run(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--demo_mode",
@@ -100,7 +100,11 @@ if __name__ == "__main__":
         default=False,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     demo_mode = args.demo_mode
     app = Viewer(demo_mode=demo_mode)
     app.run()
+
+
+if __name__ == "__main__":
+    run()

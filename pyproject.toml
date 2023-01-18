@@ -31,6 +31,9 @@ requires = [
   "poetry-core",
 ]
 
+[tool.poetry.scripts]
+glasses = "glasses.app:run"
+
 [tool.ruff]
 ignore = ['E501']
 [tool.ruff.per-file-ignores]
