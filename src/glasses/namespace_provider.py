@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum, unique
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Iterator, TypeVar
 
-# from pydantic import BaseModel
 if TYPE_CHECKING:
     from glasses.k8client import BaseClient
 
-ItemType = TypeVar("ItemType")
+ItemType = TypeVar("ItemType", bound="BaseK8")
 
 
 @unique
@@ -22,6 +21,7 @@ class BaseK8(ABC, Generic[ItemType]):
         self._items: dict[str, ItemType] = {}
         self._client = client
         self.commands: set[Commands] = set()
+        self.filter_text: str = ""
 
     @abstractmethod
     async def refresh(self) -> dict[str, ItemType]:
@@ -35,8 +35,13 @@ class BaseK8(ABC, Generic[ItemType]):
         """
         return self._items
 
+    def filter_items(self) -> Iterator[ItemType]:
+        for item in self._items.values():
+            if self.filter_text in item.name:
+                yield item
 
-class Pod(BaseK8[str]):
+
+class Pod(BaseK8):
     def __init__(self, name: str, namespace: str, client: BaseClient) -> None:
         self.namespace = namespace
         super().__init__(name, client)
