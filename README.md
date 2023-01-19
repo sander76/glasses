@@ -5,7 +5,7 @@ A TUI logviewer based on the Textual library. Trying to combine making a useful 
 ## Installation
 
 ```
-pipx install git+https://github.com/sander76/glasses.git#main
+pipx install git+https://github.com/sander76/glasses.git#main --python=python3.10
 ```
 
 to upgrade:

@@ -77,7 +77,6 @@ mypy-extensions = ">=0.4.3"
 pathspec = ">=0.9.0"
 platformdirs = ">=2"
 tomli = {version = ">=1.1.0", markers = "python_full_version < \"3.11.0a7\""}
-typing-extensions = {version = ">=3.10.0.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -735,7 +734,6 @@ importlib-metadata = ">=4.11.3,<5.0.0"
 msgpack = {version = ">=1.0.3", optional = true, markers = "extra == \"dev\""}
 nanoid = ">=2.0.0"
 rich = ">12.6.0"
-typing-extensions = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 dev = ["aiohttp (>=3.8.1)", "click (>=8.1.2)", "msgpack (>=1.0.3)"]
@@ -833,8 +831,8 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.9"
-content-hash = "469bbc46f68e93f84b8fd9ef13b4c0c86bef4664b51d690614b1fe63bb3d2be6"
+python-versions = "^3.10"
+content-hash = "c8dad1d0cccc77ee6fb3b429394d88a48c21ae31aa7e4d356eeafd687db3e36c"
 
 [metadata.files]
 aiohttp = [

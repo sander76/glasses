@@ -23,8 +23,8 @@ class UpdateableListView(Widget):
         self._listview = ListView()
         self._filter = Input(placeholder="filter text")
         self._title = Label("no title")
+
         self._item: BaseK8 = item
-        # self._filter: str = ""
         self._delay_update_task: asyncio.Task | None = None
 
     def compose(self):
@@ -76,10 +76,11 @@ class UpdateableListView(Widget):
         if self._delay_update_task:
             self._delay_update_task.cancel()
 
+    def on_mount(self):
+        self._listview.focus()
+
 
 class SlideView(Widget):
-    BINDINGS = [("b", "navigate_back", "Back")]
-
     def __init__(self, tree_data: Cluster) -> None:
         super().__init__()
         self.history: list[BaseK8] = [tree_data]
@@ -93,9 +94,6 @@ class SlideView(Widget):
 
     async def update_view(self, refresh: bool = False):
         await self._updateable_list_view.update(self.history[-1], refresh)
-
-    async def action_navigate_back(self):
-        await self._navigate_back()
 
     async def _navigate_back(self):
         if len(self.history) == 1:

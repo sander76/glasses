@@ -28,12 +28,10 @@ class SideBar(Widget):
 
 
 class TheApp(Widget):
-    def compose(self):
-        yield self._sidebar
-
-        yield self._log_viewer
-        # yield HelpView([])
-        yield Footer()
+    BINDINGS = [
+        Binding("ctrl+right", "width(1)", "Increase Navigator", show=False),
+        Binding("ctrl+left", "width(-1)", "Decrease Navigator", show=False),
+    ]
 
     sidebar_width = 60
     sidebar_min_width = 10
@@ -44,6 +42,11 @@ class TheApp(Widget):
         self._log_viewer = LogViewer(dependencies.get_log_reader(settings.logcollector))
         self._sidebar = SideBar()
         self._sidebar.styles.width = self.sidebar_width
+
+    def compose(self):
+        yield self._sidebar
+        yield self._log_viewer
+        yield Footer()
 
     async def on_slide_view_command(self, event: SlideView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
@@ -75,12 +78,6 @@ class Viewer(App):
         ("h", "view_help", "help"),
     ]
 
-    def __init__(self, demo_mode: bool):
-        super().__init__()
-        if demo_mode:
-            settings.logcollector = LogCollectors.DUMMY_LOG_COLLECTOR
-            settings.namespace_provider = NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER
-
     def compose(self) -> ComposeResult:
         yield TheApp()
 
@@ -89,6 +86,10 @@ class Viewer(App):
 
     def action_view_help(self) -> None:
         self.mount(HelpView(bindings=self.BINDINGS))
+
+    # def on_mount(self):
+    #     side_view = self.query_one("SlideView")
+    #     side_view.focus()
 
 
 def _parse_args(argv: Sequence[str] | None = None):
@@ -107,7 +108,13 @@ def _parse_args(argv: Sequence[str] | None = None):
 def run(argv: Sequence[str] | None = None) -> None:
     args = _parse_args(argv)
     demo_mode = args.demo_mode
-    app = Viewer(demo_mode=demo_mode)
+
+    if demo_mode:
+        settings.logcollector = LogCollectors.DUMMY_LOG_COLLECTOR
+        settings.namespace_provider = NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER
+
+    app = Viewer()
+
     app.run()
 
 
