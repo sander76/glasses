@@ -60,6 +60,9 @@ class TheApp(Widget):
             log_reader.pod = podname
             log_reader.namespace = namespace
 
+            start_button = self.query_one("#startlog")
+            start_button.focus()
+
     def action_width(self, by_val: int) -> None:
         if self.sidebar_width > self.sidebar_min_width or by_val > 0:
             self.sidebar_width += by_val
@@ -85,10 +88,6 @@ class Viewer(App):
 
     def action_view_help(self) -> None:
         self.mount(HelpView(bindings=self.BINDINGS))
-
-    # def on_mount(self):
-    #     side_view = self.query_one("SlideView")
-    #     side_view.focus()
 
 
 def _parse_args(argv: Sequence[str] | None = None):

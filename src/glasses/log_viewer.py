@@ -177,7 +177,12 @@ class LogOutput(Vertical):
             self.list_view.append(log_item)
 
 
-class LogViewer(Static):
+class LogViewer(Static, can_focus=True):
+    BINDINGS = [
+        ("ctrl+l", "start_logging", "Start logging"),
+        ("ctrl+s", "stop_logging", "Stop logging"),
+    ]
+
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self.reader = reader
@@ -186,3 +191,9 @@ class LogViewer(Static):
     def compose(self) -> ComposeResult:
         yield self._log_control
         yield LogOutput(self.reader)
+
+    def action_start_logging(self):
+        self.reader.start()
+
+    def action_stop_logging(self):
+        self.reader.stop()
