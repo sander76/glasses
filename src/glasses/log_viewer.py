@@ -33,18 +33,15 @@ class LoggingState(Static):
 
     def __init__(self, reader: LogReader) -> None:
         reader.subscribe("is_reading", self.is_reading_changed)
-        super().__init__()
+        super().__init__(classes="not_logging")
 
     def is_reading_changed(self, state):
+        self.toggle_class("not_logging")
+        self.toggle_class("logging")
         if state:
             self.state = State.LOGGING
-            self.remove_class("not_logging")
-            self.add_class("logging")
         else:
             self.state = State.IDLE
-            self.remove_class("logging")
-            self.add_class("not_logging")
-            self.styles.color = "yellow"
 
     def render(self) -> str:
         if self.state == State.IDLE:
