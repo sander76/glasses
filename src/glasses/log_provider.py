@@ -8,6 +8,7 @@ from rich.json import JSON
 from rich.text import Text
 
 from glasses.log_parser import ParseError, jsonparse
+from glasses.reactive_model import Reactr, ReactrModel
 
 
 class LogEvent:
@@ -17,12 +18,16 @@ class LogEvent:
         self.parsed = parsed
 
 
-class LogReader:
+class LogReader(ReactrModel):
+    namespace = Reactr("no namespace")
+    pod = Reactr("no pod")
+    is_reading = Reactr(False)
+
     def __init__(self) -> None:
-        self.namespace: str = "no namespace"
-        self.pod: str = "no pod"
+        super().__init__()
         self._stream: asyncio.Queue[str] = asyncio.Queue()
         self._parser = jsonparse
+        self._reader: asyncio.Task | None = None
 
     async def read(self) -> AsyncIterator[LogEvent]:
         while True:
@@ -36,22 +41,25 @@ class LogReader:
             else:
                 yield LogEvent(raw=JSON(data), parsed=parsed)
 
-    def start(self, namespace: str, pod: str) -> asyncio.Task:
+    async def _read(self) -> None:
         raise NotImplementedError()
 
+    def start(self) -> asyncio.Task:
+        self._reader = asyncio.create_task(self._read())
+        self.is_reading = True
+        return self._reader
+
     def stop(self) -> None:
-        raise NotImplementedError()
+        if self._reader:
+            self._reader.cancel()
+        self._reader = None
+        self.is_reading = False
 
 
 class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
-        self._reader: asyncio.Task | None = None
         self.delay: float = 0.2
-
-    def start(self, namespace: str, pod: str) -> asyncio.Task:
-        self._reader = asyncio.create_task(self._read())
-        return self._reader
 
     @staticmethod
     def log_data() -> Iterator:
@@ -69,17 +77,12 @@ class DummyLogReader(LogReader):
         except asyncio.CancelledError:
             print("stopped logger input")
 
-    def stop(self) -> None:
-        if self._reader:
-            self._reader.cancel()
-
 
 class K8LogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
         self._config = config.load_config()
         self._client = client.CoreV1Api()
-        self._reader: asyncio.Task | None = None
 
     async def _read(self) -> None:
         try:
@@ -102,16 +105,6 @@ class K8LogReader(LogReader):
             print(result)
         except asyncio.CancelledError:
             w.stop()
-
-    def start(self, namespace: str, pod: str) -> asyncio.Task:
-        self.namespace = namespace
-        self.pod = pod
-        self._reader = asyncio.create_task(self._read())
-        return self._reader
-
-    def stop(self):
-        if self._reader:
-            self._reader.cancel()
 
 
 if __name__ == "__main__":

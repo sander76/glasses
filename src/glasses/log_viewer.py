@@ -1,14 +1,64 @@
 import asyncio
+from enum import Enum, auto
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
 from glasses.log_provider import LogEvent, LogReader
 
 
-class LogControl(Vertical):
+class State(Enum):
+    IDLE = auto()
+    LOGGING = auto()
+
+
+class LoggingState(Static):
+    """Display a logging state"""
+
     DEFAULT_CSS = """
+    LoggingState {
+        width: 100%;
+    }
+    .logging {
+        background: $success;
+    }
+    .not_logging {
+        background: $warning;
+    }
+    """
+    state = reactive(State.IDLE)
+
+    def __init__(self, reader: LogReader) -> None:
+        reader.subscribe("is_reading", self.is_reading_changed)
+        super().__init__()
+
+    def is_reading_changed(self, state):
+        if state:
+            self.state = State.LOGGING
+            self.remove_class("not_logging")
+            self.add_class("logging")
+        else:
+            self.state = State.IDLE
+            self.remove_class("logging")
+            self.add_class("not_logging")
+            self.styles.color = "yellow"
+
+    def render(self) -> str:
+        if self.state == State.IDLE:
+            return "not logging"
+        return "logging"
+
+
+class LogControl(Widget):
+    DEFAULT_CSS = """
+    LogControl {
+        height: auto;
+        dock: top;
+        layout: vertical;
+    }
     .small_input {
         height: 1;
         border: none;
@@ -23,13 +73,14 @@ class LogControl(Vertical):
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self._reader = reader
+        self._logging_state = LoggingState(reader)
+        self._reader.subscribe("namespace", self._update_namespace)
+        self._reader.subscribe("pod", self._update_pod)
 
-    # should this be done with reactive properties ?
-    # I am not sure how to do reactive in combination with some kind
-    # of MVC pattern. So for now I do a manual update of the UI when an
-    # external change of the model is done.
-    def update_ui(self):
+    def _update_namespace(self, _: str) -> None:
         self.query_one("#namespace").value = self._reader.namespace
+
+    def _update_pod(self, _: str) -> None:
         self.query_one("#pod_name").value = self._reader.pod
 
     def compose(self) -> ComposeResult:
@@ -43,11 +94,12 @@ class LogControl(Vertical):
         )
         yield Button("log", id="startlog")
         yield Button("stop", id="stoplog")
+        yield self._logging_state
 
     async def on_button_pressed(self, event: Button.Pressed):
 
         if event.button.id == "startlog":
-            self._reader.start(self._reader.namespace, pod=self._reader.pod)
+            self._reader.start()
         elif event.button.id == "stoplog":
             self._reader.stop()
 
@@ -135,5 +187,5 @@ class LogViewer(Static):
         yield self._log_control
         yield LogOutput(self.reader)
 
-    def update_ui(self):
-        self._log_control.update_ui()
+    # def update_ui(self):
+    #     self._log_control.update_ui()

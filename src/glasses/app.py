@@ -56,10 +56,9 @@ class TheApp(Widget):
             assert isinstance(pod, Pod)
             podname = pod.name
             namespace = pod.namespace
+
             log_reader.pod = podname
             log_reader.namespace = namespace
-
-            self._log_viewer.update_ui()
 
     def action_width(self, by_val: int) -> None:
         if self.sidebar_width > self.sidebar_min_width or by_val > 0:

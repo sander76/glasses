@@ -20,12 +20,6 @@ SlideView {
     background: green;
 }
 
-LogControl {
-    height: auto;
-    dock: top;
-}
-
-
 LogViewer {
     width: 100%;
     height: 100%;
