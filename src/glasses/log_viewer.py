@@ -186,6 +186,3 @@ class LogViewer(Static):
     def compose(self) -> ComposeResult:
         yield self._log_control
         yield LogOutput(self.reader)
-
-    # def update_ui(self):
-    #     self._log_control.update_ui()
