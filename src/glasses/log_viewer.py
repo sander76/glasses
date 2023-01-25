@@ -89,22 +89,18 @@ class LogControl(Widget):
             Label("pod name: "),
             Input(self._reader.pod, id="pod_name", classes="small_input"),
         )
-        yield Button("log", id="startlog")
-        yield Button("stop", id="stoplog")
+        yield Horizontal(
+            Button("log", id="startlog"),
+            Button("stop", id="stoplog"),
+            Button("clear log", id="clearlog"),
+        )
         yield self._logging_state
 
-    async def on_button_pressed(self, event: Button.Pressed):
-
-        if event.button.id == "startlog":
-            self._reader.start()
-        elif event.button.id == "stoplog":
-            self._reader.stop()
-
-    async def on_input_changed(self, event: Input.Changed):
-        if event.input.id == "namespace":
-            self._reader.namespace = event.input.value
-        elif event.input.id == "pod_name":
-            self._reader.pod = event.input.value
+    # async def on_input_changed(self, event: Input.Changed):
+    #     if event.input.id == "namespace":
+    #         self._reader.namespace = event.input.value
+    #     elif event.input.id == "pod_name":
+    #         self._reader.pod = event.input.value
 
 
 class LogItem(ListItem):
@@ -156,14 +152,14 @@ class LogOutput(Vertical):
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self._reader = reader
+        self._list_view = ListView()
 
     def action_expand(self):
         item = self.list_view.highlighted_child
         item.toggle(not item.expanded)
 
     def compose(self) -> ComposeResult:
-        self.list_view = ListView()
-        yield self.list_view
+        yield self._list_view
 
     def on_mount(self, event):
         asyncio.create_task(self._watch_log())
@@ -171,7 +167,10 @@ class LogOutput(Vertical):
     async def _watch_log(self):
         async for line in self._reader.read():
             log_item = LogItem(line)
-            self.list_view.append(log_item)
+            self._list_view.append(log_item)
+
+    def clear_log(self):
+        self._list_view.clear()
 
 
 class LogViewer(Static, can_focus=True):
@@ -184,13 +183,26 @@ class LogViewer(Static, can_focus=True):
         super().__init__()
         self.reader = reader
         self._log_control = LogControl(reader)
+        self._log_output = LogOutput(self.reader)
 
     def compose(self) -> ComposeResult:
         yield self._log_control
-        yield LogOutput(self.reader)
+        yield self._log_output
+
+    async def on_button_pressed(self, event: Button.Pressed):
+
+        if event.button.id == "startlog":
+            self.action_start_logging()
+        elif event.button.id == "stoplog":
+            self.action_stop_logging()
+        elif event.button.id == "clearlog":
+            self.action_clear_log()
 
     def action_start_logging(self):
         self.reader.start()
 
     def action_stop_logging(self):
         self.reader.stop()
+
+    def action_clear_log(self):
+        self._log_output.clear_log()
