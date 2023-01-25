@@ -23,14 +23,14 @@ class Reactr(Generic[ReactrType]):
 
 
 class ReactrModel:
-    def _get_weakref(self, func):
-        return WeakMethod(func, self.unsubscribe)
-
     def __init__(self) -> None:
         self._subscriptions: dict[str, list[Callable[[object], None]]] = defaultdict(
             list
         )
         self._weakrefs: dict[WeakMethod, str] = {}
+
+    def _get_weakref(self, func):
+        return WeakMethod(func, self.unsubscribe)
 
     def publish(self, property: str, value):
         for subscription in self._subscriptions[property]:
