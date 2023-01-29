@@ -8,19 +8,23 @@ nox.options.reuse_existing_virtualenvs = True
 PROJECT_FOLDER = "src"
 
 
-@nox.session
+@nox.session(python=False)
 def fix_quality(session):
     """Fixes possible quality errors."""
-    session.run("poetry", "install", "--sync", external=True)
+
+    if session.posargs and session.posargs[0] == "skip-sync":
+        skip_sync = True
+    else:
+        skip_sync = False
+
+    if not skip_sync:
+        session.run("poetry", "install", "--sync", external=True)
 
     session.run("black", PROJECT_FOLDER)
     session.run("black", "tests")
 
     session.run("ruff", PROJECT_FOLDER, "--fix")
     session.run("ruff", "tests", "--fix")
-
-    session.run("isort", PROJECT_FOLDER)
-    session.run("isort", "tests")
 
 
 @nox.session

@@ -288,20 +288,6 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
-name = "isort"
-version = "5.11.4"
-description = "A Python utility / library to sort Python imports."
-category = "dev"
-optional = false
-python-versions = ">=3.7.0"
-
-[package.extras]
-colors = ["colorama (>=0.4.3,<0.5.0)"]
-pipfile-deprecated-finder = ["pipreqs", "requirementslib"]
-plugins = ["setuptools"]
-requirements-deprecated-finder = ["pip-api", "pipreqs"]
-
-[[package]]
 name = "kubernetes"
 version = "25.3.0"
 description = "Kubernetes python client"
@@ -832,7 +818,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "d1bba39d63f005077bd8253558ac35d0b16e20378b913d1b88342d433d942d15"
+content-hash = "1ebc7bad16773a91f834009ce153bd16ff057d8944fe90269c43349ced03b614"
 
 [metadata.files]
 aiohttp = [
@@ -1100,10 +1086,6 @@ importlib-metadata = [
 iniconfig = [
     {file = "iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374"},
     {file = "iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3"},
-]
-isort = [
-    {file = "isort-5.11.4-py3-none-any.whl", hash = "sha256:c033fd0edb91000a7f09527fe5c75321878f98322a77ddcc81adbd83724afb7b"},
-    {file = "isort-5.11.4.tar.gz", hash = "sha256:6db30c5ded9815d813932c04c2f85a360bcdd35fed496f4d8f35495ef0a261b6"},
 ]
 kubernetes = [
     {file = "kubernetes-25.3.0-py2.py3-none-any.whl", hash = "sha256:eb42333dad0bb5caf4e66460c6a4a1a36f0f057a040f35018f6c05a699baed86"},
