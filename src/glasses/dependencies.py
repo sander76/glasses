@@ -1,7 +1,7 @@
 from functools import cache
 
+from glasses.controllers.log_provider import DummyLogReader, K8LogReader, LogReader
 from glasses.k8client import DummyClient, K8Client
-from glasses.log_provider import DummyLogReader, K8LogReader, LogReader
 from glasses.namespace_provider import Cluster
 from glasses.settings import LogCollectors, NameSpaceProvider, settings
 

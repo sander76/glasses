@@ -7,11 +7,11 @@ from textual.widget import Widget
 from textual.widgets import Footer
 
 from glasses import dependencies
-from glasses.log_viewer import LogViewer
-from glasses.modal import HelpView
 from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
-from glasses.nested_list_view import SlideView
 from glasses.settings import LogCollectors, NameSpaceProvider, settings
+from glasses.widgets.log_viewer import LogViewer
+from glasses.widgets.modal import HelpView
+from glasses.widgets.nested_list_view import NestedListView
 
 ID_BTN_REFRESH = "refresh"
 
@@ -22,7 +22,7 @@ class SideBar(Widget):
     """Namespaces view."""
 
     def compose(self) -> ComposeResult:
-        yield SlideView(
+        yield NestedListView(
             dependencies.get_namespace_provider(settings.namespace_provider)
         )
 
@@ -48,7 +48,7 @@ class TheApp(Widget):
         yield self._log_viewer
         yield Footer()
 
-    async def on_slide_view_command(self, event: SlideView.Command) -> None:
+    async def on_slide_view_command(self, event: NestedListView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
             log_reader = self._log_viewer.reader
 
@@ -72,7 +72,7 @@ class TheApp(Widget):
 class Viewer(App):
     """An app to view logging."""
 
-    CSS_PATH = "layout.css"
+    CSS_PATH = "app.css"
     BINDINGS = [
         Binding("d", "toggle_dark", "Toggle dark mode", show=False),
         Binding("ctrl+right", "width(1)", "Increase Navigator", show=False),

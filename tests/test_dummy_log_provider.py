@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 from textual.widgets import Label
 
-from glasses.log_provider import DummyLogReader, LogEvent
+from glasses.controllers.log_provider import DummyLogReader, LogEvent
 
 
 @pytest_asyncio.fixture

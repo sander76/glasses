@@ -56,28 +56,6 @@ class LogReader(ReactrModel):
         self.is_reading = False
 
 
-class DummyLogReader(LogReader):
-    def __init__(self) -> None:
-        super().__init__()
-        self.delay: float = 0.2
-
-    @staticmethod
-    def log_data() -> Iterator:
-        with open(Path(__file__).parent.parent.parent / "tests" / "log_data.txt") as fl:
-            data = fl.read().split("\n")
-        return cycle(data)
-
-    async def _read(self) -> None:
-
-        try:
-            for line in self.log_data():
-
-                await asyncio.sleep(self.delay)
-                await self._stream.put(line)
-        except asyncio.CancelledError:
-            print("stopped logger input")
-
-
 class K8LogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
@@ -105,6 +83,28 @@ class K8LogReader(LogReader):
             print(result)
         except asyncio.CancelledError:
             w.stop()
+
+
+class DummyLogReader(LogReader):
+    def __init__(self) -> None:
+        super().__init__()
+        self.delay: float = 0.2
+
+    @staticmethod
+    def log_data() -> Iterator:
+        with open(Path(__file__).parent.parent.parent / "tests" / "log_data.txt") as fl:
+            data = fl.read().split("\n")
+        return cycle(data)
+
+    async def _read(self) -> None:
+
+        try:
+            for line in self.log_data():
+
+                await asyncio.sleep(self.delay)
+                await self._stream.put(line)
+        except asyncio.CancelledError:
+            print("stopped logger input")
 
 
 if __name__ == "__main__":

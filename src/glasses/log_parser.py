@@ -95,7 +95,7 @@ def _parse(_js: dict[Any, Any]) -> Text:
 
 
 if __name__ == "__main__":
-    from glasses import log_provider
+    from glasses.controllers import log_provider
 
     log_data = log_provider.DummyLogReader.log_data()
     for line in range(5):

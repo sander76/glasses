@@ -7,7 +7,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
-from glasses.log_provider import LogEvent, LogReader
+from glasses.controllers.log_provider import LogEvent, LogReader
 
 
 class State(Enum):

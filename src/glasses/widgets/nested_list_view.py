@@ -7,7 +7,62 @@ from textual.widgets import Input, Label, ListItem, ListView
 
 from glasses.namespace_provider import BaseK8, Cluster, Commands
 
-ListItems = dict[str, BaseK8]
+
+class NestedListView(Widget):
+    def __init__(self, tree_data: Cluster) -> None:
+        super().__init__()
+        self.history: list[BaseK8] = [tree_data]
+        self._updateable_list_view = UpdateableListView(tree_data)
+
+    def compose(self) -> ComposeResult:
+        yield self._updateable_list_view
+
+    async def on_mount(self):
+        await self.update_view()
+
+    async def update_view(self, refresh: bool = False):
+        await self._updateable_list_view.update(self.history[-1], refresh)
+
+    async def _navigate_back(self):
+        if len(self.history) == 1:
+            return
+        self.history.pop()
+        await self.update_view()
+
+    async def _new_view(self, item_id: str):
+        new_view = self.history[-1].items[item_id]
+        self.history.append(new_view)
+        await self.update_view()
+
+    async def on_list_view_selected(self, event: ListView.Selected):
+        id = event.item.id
+        assert isinstance(id, str)
+        if id == "update_view":
+            await self.update_view(refresh=True)
+        elif id == "navigate_back":
+            await self._navigate_back()
+        elif self.history[-1].items and id in self.history[-1].items:
+            await self._new_view(id)
+        elif Commands[id] in self.history[-1].commands:
+            await self.emit(
+                NestedListView.Command(self, data=self.history[-1], id=Commands[id])
+            )
+        else:
+            print("nothing found.")
+
+    class Selected(Message):
+        def __init__(self, sender: "NestedListView", data: BaseK8, id: str) -> None:
+            super().__init__(sender)
+            self.data = data
+            self.id = id
+
+    class Command(Message):
+        def __init__(
+            self, sender: "NestedListView", data: BaseK8, id: Commands
+        ) -> None:
+            super().__init__(sender)
+            self.data = data
+            self.id = id
 
 
 class UpdateableListView(Widget):
@@ -49,7 +104,6 @@ class UpdateableListView(Widget):
         self._listview.append(ListItem(Label(" [Refresh]"), id="update_view"))
 
         for item in self._item.filter_items():
-            print(item)
             self._listview.append(ListItem(Label(f"> {item.name}"), id=item.name))
         for cmd in self._item.commands:
             self._listview.append(
@@ -78,58 +132,3 @@ class UpdateableListView(Widget):
 
     def on_mount(self):
         self._listview.focus()
-
-
-class SlideView(Widget):
-    def __init__(self, tree_data: Cluster) -> None:
-        super().__init__()
-        self.history: list[BaseK8] = [tree_data]
-        self._updateable_list_view = UpdateableListView(tree_data)
-
-    def compose(self) -> ComposeResult:
-        yield self._updateable_list_view
-
-    async def on_mount(self):
-        await self.update_view()
-
-    async def update_view(self, refresh: bool = False):
-        await self._updateable_list_view.update(self.history[-1], refresh)
-
-    async def _navigate_back(self):
-        if len(self.history) == 1:
-            return
-        self.history.pop()
-        await self.update_view()
-
-    async def _new_view(self, item_id: str):
-        new_view = self.history[-1].items[item_id]
-        self.history.append(new_view)
-        await self.update_view()
-
-    async def on_list_view_selected(self, event: ListView.Selected):
-        id = event.item.id
-        assert isinstance(id, str)
-        if id == "update_view":
-            await self.update_view(refresh=True)
-        elif id == "navigate_back":
-            await self._navigate_back()
-        elif self.history[-1].items and id in self.history[-1].items:
-            await self._new_view(id)
-        elif Commands[id] in self.history[-1].commands:
-            await self.emit(
-                SlideView.Command(self, data=self.history[-1], id=Commands[id])
-            )
-        else:
-            print("nothing found.")
-
-    class Selected(Message):
-        def __init__(self, sender: "SlideView", data: BaseK8, id: str) -> None:
-            super().__init__(sender)
-            self.data = data
-            self.id = id
-
-    class Command(Message):
-        def __init__(self, sender: "SlideView", data: BaseK8, id: Commands) -> None:
-            super().__init__(sender)
-            self.data = data
-            self.id = id
