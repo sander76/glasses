@@ -110,21 +110,30 @@ class UpdateableListView(Widget):
                 ListItem(Label(f" \[{cmd.value}]"), id=cmd.name)  # noqa
             )
 
-    async def delay_update(self):
-        try:
-            await asyncio.sleep(0.4)
-            await self._update()
-        except asyncio.CancelledError:
-            pass
+    def update_with_delay(self):
+        """Update the ui after a delay
+
+        Prevent updating the UI too much when enter keys into the filter.
+        """
+        if self._delay_update_task:
+            self._delay_update_task.cancel()
+
+        async def delayed_update():
+            try:
+                await asyncio.sleep(0.4)
+                await self._update()
+            except asyncio.CancelledError:
+                pass
+
+        self._delay_update_task = asyncio.create_task(delayed_update())
 
     async def on_input_changed(self, event: Input.Changed):
         if self._item.filter_text == event.value:
             return
 
         self._item.filter_text = event.value
-        if self._delay_update_task:
-            self._delay_update_task.cancel()
-        self._delay_update_task = asyncio.create_task(self.delay_update())
+
+        self.update_with_delay()
 
     async def on_unmount(self):
         if self._delay_update_task:
