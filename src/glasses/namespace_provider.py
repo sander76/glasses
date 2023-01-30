@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum, unique
-from typing import TYPE_CHECKING, Generic, Iterator, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Iterator, TypeVar
 
 if TYPE_CHECKING:
     from glasses.k8client import BaseClient
@@ -47,7 +47,7 @@ class Pod(BaseK8):
         super().__init__(name, client)
         self.commands = {Commands.VIEW_LOG}
 
-    async def refresh(self):
+    async def refresh(self) -> dict[str, Any]:
         return self.items
 
 

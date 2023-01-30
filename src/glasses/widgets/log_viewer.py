@@ -1,5 +1,6 @@
 import asyncio
 from enum import Enum, auto
+from typing import Any
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -35,13 +36,15 @@ class LoggingState(Static):
         reader.subscribe("is_reading", self.is_reading_changed)
         super().__init__(classes="not_logging")
 
-    def is_reading_changed(self, state):
-        self.toggle_class("not_logging")
-        self.toggle_class("logging")
+    def is_reading_changed(self, state: State) -> None:
         if state:
             self.state = State.LOGGING
+            self.remove_class("not_logging")
+            self.add_class("logging")
         else:
             self.state = State.IDLE
+            self.remove_class("logging")
+            self.add_class("not_logging")
 
     def render(self) -> str:
         if self.state == State.IDLE:
@@ -75,10 +78,10 @@ class LogControl(Widget):
         self._reader.subscribe("pod", self._update_pod)
 
     def _update_namespace(self, _: str) -> None:
-        self.query_one("#namespace").value = self._reader.namespace
+        self.query_one("#namespace", expect_type=Input).value = self._reader.namespace
 
     def _update_pod(self, _: str) -> None:
-        self.query_one("#pod_name").value = self._reader.pod
+        self.query_one("#pod_name", expect_type=Input).value = self._reader.pod
 
     def compose(self) -> ComposeResult:
         yield Horizontal(
@@ -111,14 +114,14 @@ class LogItem(ListItem):
     }
     """
 
-    def __init__(self, log_item: LogEvent, *args, **kwargs) -> None:
+    def __init__(self, log_item: LogEvent) -> None:
 
-        super().__init__(Label(log_item.parsed), *args, **kwargs)
+        super().__init__(Label(log_item.parsed))
         self._log_item = log_item
         self.expanded: bool = False
         self._expand_data: Label | None = None
 
-    def toggle(self, expand: bool):
+    def toggle(self, expand: bool) -> None:
         if expand:
             if self._expand_data is None:
                 self._expand_data = Label(self._log_item.raw)
@@ -154,22 +157,23 @@ class LogOutput(Vertical):
         self._reader = reader
         self._list_view = ListView()
 
-    def action_expand(self):
-        item = self.list_view.highlighted_child
+    def action_expand(self) -> None:
+        item = self._list_view.highlighted_child
+        assert isinstance(item, LogItem)
         item.toggle(not item.expanded)
 
     def compose(self) -> ComposeResult:
         yield self._list_view
 
-    def on_mount(self, event):
+    def on_mount(self, event: Any) -> None:
         asyncio.create_task(self._watch_log())
 
-    async def _watch_log(self):
+    async def _watch_log(self) -> None:
         async for line in self._reader.read():
             log_item = LogItem(line)
             self._list_view.append(log_item)
 
-    def clear_log(self):
+    def clear_log(self) -> None:
         self._list_view.clear()
 
 
@@ -189,7 +193,7 @@ class LogViewer(Static, can_focus=True):
         yield self._log_control
         yield self._log_output
 
-    async def on_button_pressed(self, event: Button.Pressed):
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
 
         if event.button.id == "startlog":
             self.action_start_logging()
@@ -198,11 +202,11 @@ class LogViewer(Static, can_focus=True):
         elif event.button.id == "clearlog":
             self.action_clear_log()
 
-    def action_start_logging(self):
+    def action_start_logging(self) -> None:
         self.reader.start()
 
-    def action_stop_logging(self):
+    def action_stop_logging(self) -> None:
         self.reader.stop()
 
-    def action_clear_log(self):
+    def action_clear_log(self) -> None:
         self._log_output.clear_log()

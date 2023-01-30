@@ -1,3 +1,4 @@
+from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Input, Label
 
@@ -35,10 +36,10 @@ class InputWithLabel(Horizontal):
             value=self.initial_input_value, placeholder=self._placeholder, id="input"
         )
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         yield Label(self.label, id="label")
         yield self._input
 
     @property
-    def value(self):
+    def value(self) -> str:
         return self._input.value

@@ -43,12 +43,12 @@ class TheApp(Widget):
         self._sidebar = SideBar()
         self._sidebar.styles.width = self.sidebar_width
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         yield self._sidebar
         yield self._log_viewer
         yield Footer()
 
-    async def on_slide_view_command(self, event: NestedListView.Command) -> None:
+    async def on_nested_list_view_command(self, event: NestedListView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
             log_reader = self._log_viewer.reader
 
@@ -90,7 +90,7 @@ class Viewer(App):
         self.mount(HelpView(bindings=self.BINDINGS))
 
 
-def _parse_args(argv: Sequence[str] | None = None):
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--demo_mode",

@@ -17,24 +17,24 @@ class NestedListView(Widget):
     def compose(self) -> ComposeResult:
         yield self._updateable_list_view
 
-    async def on_mount(self):
+    async def on_mount(self) -> None:
         await self.update_view()
 
-    async def update_view(self, refresh: bool = False):
+    async def update_view(self, refresh: bool = False) -> None:
         await self._updateable_list_view.update(self.history[-1], refresh)
 
-    async def _navigate_back(self):
+    async def _navigate_back(self) -> None:
         if len(self.history) == 1:
             return
         self.history.pop()
         await self.update_view()
 
-    async def _new_view(self, item_id: str):
+    async def _new_view(self, item_id: str) -> None:
         new_view = self.history[-1].items[item_id]
         self.history.append(new_view)
         await self.update_view()
 
-    async def on_list_view_selected(self, event: ListView.Selected):
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
         id = event.item.id
         assert isinstance(id, str)
         if id == "update_view":
@@ -47,6 +47,7 @@ class NestedListView(Widget):
             await self.emit(
                 NestedListView.Command(self, data=self.history[-1], id=Commands[id])
             )
+            print("sent")
         else:
             print("nothing found.")
 
@@ -82,12 +83,12 @@ class UpdateableListView(Widget):
         self._item: BaseK8 = item
         self._delay_update_task: asyncio.Task | None = None
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         yield self._title
         yield self._filter
         yield self._listview
 
-    async def update(self, view_item_data: BaseK8, refresh: bool):
+    async def update(self, view_item_data: BaseK8, refresh: bool) -> None:
         self._item = view_item_data
         if refresh:
             await self._item.refresh()
@@ -110,7 +111,7 @@ class UpdateableListView(Widget):
                 ListItem(Label(f" \[{cmd.value}]"), id=cmd.name)  # noqa
             )
 
-    def update_with_delay(self):
+    def update_with_delay(self) -> None:
         """Update the ui after a delay
 
         Prevent updating the UI too much when enter keys into the filter.
@@ -118,7 +119,7 @@ class UpdateableListView(Widget):
         if self._delay_update_task:
             self._delay_update_task.cancel()
 
-        async def delayed_update():
+        async def delayed_update() -> None:
             try:
                 await asyncio.sleep(0.4)
                 await self._update()
@@ -127,7 +128,7 @@ class UpdateableListView(Widget):
 
         self._delay_update_task = asyncio.create_task(delayed_update())
 
-    async def on_input_changed(self, event: Input.Changed):
+    async def on_input_changed(self, event: Input.Changed) -> None:
         if self._item.filter_text == event.value:
             return
 
@@ -135,9 +136,9 @@ class UpdateableListView(Widget):
 
         self.update_with_delay()
 
-    async def on_unmount(self):
+    async def on_unmount(self) -> None:
         if self._delay_update_task:
             self._delay_update_task.cancel()
 
-    def on_mount(self):
+    def on_mount(self) -> None:
         self._listview.focus()

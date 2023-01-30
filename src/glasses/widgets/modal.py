@@ -16,7 +16,7 @@ class ModalView(Widget):
     def __init__(self) -> None:
         super().__init__(id="modal_view")
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         yield HelpView([])
 
 
@@ -49,8 +49,8 @@ class HelpView(Widget, can_focus=True):
     def compose(self) -> ComposeResult:
         yield from (Label(shortcut) for shortcut in self._short_cut_keys)
 
-    def on_mount(self):
+    def on_mount(self) -> None:
         self.focus()
 
-    def action_close_view(self):
+    def action_close_view(self) -> None:
         self.remove()

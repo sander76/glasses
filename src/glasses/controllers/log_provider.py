@@ -65,9 +65,10 @@ class K8LogReader(LogReader):
     async def _read(self) -> None:
         try:
             loop = asyncio.get_running_loop()
+
             w = watch.Watch()
 
-            def _get_log():
+            def _get_log() -> None:
                 try:
                     for e in w.stream(
                         self._client.read_namespaced_pod_log,
@@ -92,7 +93,7 @@ class DummyLogReader(LogReader):
 
     @staticmethod
     def log_data() -> Iterator:
-        with open(Path(__file__).parent.parent.parent / "tests" / "log_data.txt") as fl:
+        with open(Path(__file__).parent / "log_data.txt") as fl:
             data = fl.read().split("\n")
         return cycle(data)
 
@@ -105,30 +106,3 @@ class DummyLogReader(LogReader):
                 await self._stream.put(line)
         except asyncio.CancelledError:
             print("stopped logger input")
-
-
-if __name__ == "__main__":
-    # config.load_config()
-    # _client = client.CoreV1Api()
-
-    # w = watch.Watch()
-
-    # for e in w.stream(
-    #     _client.read_namespaced_pod_log,
-    #     name="grid-insight-job-service-5d7fb988f6-rgtmh",
-    #     namespace="ogi-kcn-acc",
-    #     tail_lines=10,
-    # ):
-    #     print(e)
-
-    logreader = K8LogReader()
-
-    async def run():
-        async def read():
-            async for line in logreader.read():
-                print(line)
-
-        logreader.start("ogi-kcn-acc", "grid-insight-job-service-5d7fb988f6-rgtmh")
-        await read()
-
-    asyncio.run(run())
