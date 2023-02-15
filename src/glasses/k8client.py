@@ -29,6 +29,14 @@ class K8Client(BaseClient):
 
         Reads the .kube config file.
         """
+
+        # for an async usage:
+        #         loader = await config.load_kube_config()
+
+        # # list contexts
+        # for context in loader.list_contexts():
+        #     print(context["context"]["namespace"])
+
         contexts = config.list_kube_config_contexts()
 
         result: dict[str, NameSpace] = {}

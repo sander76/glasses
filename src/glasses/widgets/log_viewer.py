@@ -198,15 +198,18 @@ class LogViewer(Static, can_focus=True):
         if event.button.id == "startlog":
             self.action_start_logging()
         elif event.button.id == "stoplog":
-            self.action_stop_logging()
+            await self.action_stop_logging()
         elif event.button.id == "clearlog":
             self.action_clear_log()
 
     def action_start_logging(self) -> None:
         self.reader.start()
 
-    def action_stop_logging(self) -> None:
-        self.reader.stop()
+    async def action_stop_logging(self) -> None:
+        await self.reader.stop()
 
     def action_clear_log(self) -> None:
         self._log_output.clear_log()
+
+    async def on_unmount(self) -> None:
+        await self.reader.stop()
