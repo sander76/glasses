@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from typing import Sequence, TypeVar
 
 from textual.app import App, ComposeResult
@@ -7,6 +8,7 @@ from textual.widget import Widget
 from textual.widgets import Footer
 
 from glasses import dependencies
+from glasses.logger import setup_logging
 from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
 from glasses.settings import LogCollectors, NameSpaceProvider, settings
 from glasses.widgets.log_viewer import LogViewer
@@ -110,6 +112,11 @@ def run(argv: Sequence[str] | None = None) -> None:
     if demo_mode:
         settings.logcollector = LogCollectors.DUMMY_LOG_COLLECTOR
         settings.namespace_provider = NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER
+
+    glasses_folder = Path.home() / ".config" / "glasses"
+    glasses_folder.mkdir(exist_ok=True, parents=True)
+
+    setup_logging(glasses_folder)
 
     app = Viewer()
 
