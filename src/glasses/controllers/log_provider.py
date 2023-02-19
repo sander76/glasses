@@ -11,7 +11,7 @@ from kubernetes_asyncio import client, config
 from rich.json import JSON
 from rich.text import Text
 
-from glasses.log_parser import ParseError, jsonparse
+from glasses.log_parser import JsonParseError, jsonparse
 from glasses.reactive_model import Reactr, ReactrModel
 
 _logger = logging.getLogger(__name__)
@@ -41,9 +41,9 @@ class LogReader(ReactrModel):
             self._stream.task_done()
             try:
                 parsed = self._parser(data)
-            except ParseError as err:
-                parsed = Text(f"ERROR: {err}, data={data}", "red")
-                yield LogEvent(raw=data, parsed=parsed)
+            except JsonParseError as err:
+                parsed = Text.assemble(Text("[!E] ", "red"), err.raw)
+                yield LogEvent(raw=err.raw, parsed=parsed)
             else:
                 yield LogEvent(raw=JSON(data), parsed=parsed)
 

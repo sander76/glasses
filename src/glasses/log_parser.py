@@ -18,6 +18,12 @@ class ParseError(Exception):
     """A general parsing error"""
 
 
+class JsonParseError(ParseError):
+    def __init__(self, raw: str, *args: object) -> None:
+        self.raw = raw
+        super().__init__(*args)
+
+
 def _time(time: str) -> Text:
     utc_dt = datetime.strptime(time, TEXT_FORMAT).replace(tzinfo=timezone.utc)
     tz_aware = utc_dt.astimezone()
@@ -54,7 +60,7 @@ def jsonparse(input: str) -> Text:
     try:
         _js = json.loads(input)
     except json.JSONDecodeError:
-        raise ParseError(f"Unable to JSON parse incoming data {input}")
+        raise JsonParseError(input)
     return _parse(_js)
 
 
