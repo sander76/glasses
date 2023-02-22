@@ -11,6 +11,7 @@ textual = "^0.9.1"
 pydantic = "^1.10.2"
 kubernetes = "^25.3.0"
 kubernetes-asyncio = "^24.2.2"
+lark = "^1.1.5"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -43,6 +44,7 @@ src = [
 select = [
   "E",
   "F",
+  "W",
   "I", # isort
 ]
 ignore = [

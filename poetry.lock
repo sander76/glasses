@@ -342,6 +342,19 @@ six = ">=1.9.0"
 urllib3 = ">=1.24.2"
 
 [[package]]
+name = "lark"
+version = "1.1.5"
+description = "a modern parsing library"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+atomic-cache = ["atomicwrites"]
+nearley = ["js2py"]
+regex = ["regex"]
+
+[[package]]
 name = "mccabe"
 version = "0.7.0"
 description = "McCabe checker, plugin for flake8"
@@ -849,7 +862,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "977e2edebe34b16d796e851b9e9644b8a51d32f703dab3f7582496813e5cb382"
+content-hash = "aa9ba59f22155ccb41f7b83f1656a9b1f842550ba1ccae692b163cfbf62378c7"
 
 [metadata.files]
 aiohttp = [
@@ -1129,6 +1142,10 @@ kubernetes = [
 kubernetes-asyncio = [
     {file = "kubernetes_asyncio-24.2.2-py3-none-any.whl", hash = "sha256:4df5f5d7d1fa2b7e9f772d661b46378f9e4158e62f3c730c165b315d8e3b51ea"},
     {file = "kubernetes_asyncio-24.2.2.tar.gz", hash = "sha256:0a8ad5f31bcb2a7b3235b754fe9c83055e66970c68326b42dbee289632bd9f0c"},
+]
+lark = [
+    {file = "lark-1.1.5-py3-none-any.whl", hash = "sha256:8476f9903e93fbde4f6c327f74d79e9b4bd0ed9294c5dfa3164ab8c581b5de2a"},
+    {file = "lark-1.1.5.tar.gz", hash = "sha256:4b534eae1f9af5b4ea000bea95776350befe1981658eea3820a01c37e504bb4d"},
 ]
 mccabe = [
     {file = "mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e"},

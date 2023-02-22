@@ -1,3 +1,6 @@
+import pytest
+
+from glasses import plain_text_parser
 from glasses.log_parser import _parse
 
 
@@ -42,3 +45,23 @@ def test_message_with_long_message__returns_valid_string():
     log_line = _parse(log_message)
     expected_plain = "2022-12-27 12:04:22 [info      ] A log message A log message A log message A log message A log message  ecs={'version': '1.6.0'} extra=test"
     assert log_line.plain == expected_plain
+
+
+@pytest.mark.parametrize(
+    "input,output",
+    [
+        (
+            "this has warn message",
+            "this has [yellow]warn[/yellow] message",
+        ),
+        (
+            "2023-02-19T07:32:56.254753Z this is a [ warning ] message",
+            "2023-02-19T07:32:56.254753Z this is a [yellow][ warning ][/yellow] message",
+        ),
+    ],
+)
+def test_message__plain_parser__returns_valid_string(input, output):
+
+    result = plain_text_parser.parse(input)
+
+    assert result.markup == output
