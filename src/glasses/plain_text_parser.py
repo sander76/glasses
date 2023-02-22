@@ -26,6 +26,7 @@ parser = Lark(
 
 
 def parse(input: str) -> Text:
+    input = input.rstrip("\n")
     try:
         tokens = parser.parse(input)
     except LarkError:
