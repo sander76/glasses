@@ -26,8 +26,10 @@ class LogEvent:
 
 
 class LogReader(ReactrModel):
-    namespace = Reactr("no namespace")
+    namespace: Reactr[str] = Reactr("no namespace")
     pod = Reactr("no pod")
+    tail = Reactr[int](50)
+
     is_reading = Reactr(False)
 
     def __init__(self) -> None:
@@ -100,7 +102,7 @@ class K8LogReader(LogReader):
             _logger.exception("an unknown problem occurred while reading the log.")
             self.is_reading = False
 
-    async def print_pod_log(self, lines: int = 50) -> None:
+    async def print_pod_log(self) -> None:
 
         last_lines: deque[bytes] = deque(maxlen=10)
 
@@ -163,7 +165,7 @@ class K8LogReader(LogReader):
                 print("eof reached.")
 
         # do the first read getting the log history.
-        await _read(lines, follow=False)
+        await _read(self.tail, follow=False)
         # start watching the log for changes.
         while True:
             try:

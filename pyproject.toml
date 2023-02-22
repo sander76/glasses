@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "glasses"
-version = "0.8.0"
+version = "0.9.0"
 description = ""
 authors = ["Sander Teunissen"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-textual = "^0.9.1"
+textual = "^0.11.1"
 pydantic = "^1.10.2"
 kubernetes = "^25.3.0"
 kubernetes-asyncio = "^24.2.2"

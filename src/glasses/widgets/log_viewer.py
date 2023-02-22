@@ -87,6 +87,8 @@ class LogControl(Widget):
         yield Horizontal(
             Label("namespace: "),
             Input(self._reader.namespace, id="namespace", classes="small_input"),
+            Label("logtail"),
+            Input(str(self._reader.tail), id="tail", classes="small_input"),
         )
         yield Horizontal(
             Label("pod name: "),
@@ -98,6 +100,16 @@ class LogControl(Widget):
             Button("clear log", id="clearlog"),
         )
         yield self._logging_state
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "tail":
+            try:
+                value = int(event.value)
+            except ValueError:
+                val = self.query_one("#tail", Input)
+                val.value = str(self._reader.tail)
+            else:
+                self._reader.tail = value
 
     # async def on_input_changed(self, event: Input.Changed):
     #     if event.input.id == "namespace":

@@ -44,7 +44,7 @@ class NestedListView(Widget):
         elif self.history[-1].items and id in self.history[-1].items:
             await self._new_view(id)
         elif Commands[id] in self.history[-1].commands:
-            await self.emit(
+            await self.post_message(
                 NestedListView.Command(self, data=self.history[-1], id=Commands[id])
             )
             print("sent")
