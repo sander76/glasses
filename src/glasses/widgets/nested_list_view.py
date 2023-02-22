@@ -18,9 +18,9 @@ class NestedListView(Widget):
         yield self._updateable_list_view
 
     async def on_mount(self) -> None:
-        await self.update_view()
+        await self.update_view(refresh=True)
 
-    async def update_view(self, refresh: bool = False) -> None:
+    async def update_view(self, refresh: bool = True) -> None:
         await self._updateable_list_view.update(self.history[-1], refresh)
 
     async def _navigate_back(self) -> None:
@@ -88,7 +88,7 @@ class UpdateableListView(Widget):
         yield self._filter
         yield self._listview
 
-    async def update(self, view_item_data: BaseK8, refresh: bool) -> None:
+    async def update(self, view_item_data: BaseK8, refresh: bool = True) -> None:
         self._item = view_item_data
         if refresh:
             await self._item.refresh()
