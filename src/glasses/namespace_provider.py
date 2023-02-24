@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from enum import Enum, unique
 from typing import TYPE_CHECKING, Any, Generic, Iterator, TypeVar
+
+from rich.text import Text
 
 if TYPE_CHECKING:
     from glasses.k8client import BaseClient
@@ -40,15 +43,39 @@ class BaseK8(ABC, Generic[ItemType]):
             if self.filter_text in item.name:
                 yield item
 
+    @property
+    def label(self) -> Text | str:
+        return self.name
+
 
 class Pod(BaseK8):
-    def __init__(self, name: str, namespace: str, client: BaseClient) -> None:
+    DATETIME_OUTPUT = "%Y-%m-%d %H:%M:%S"
+
+    def __init__(
+        self,
+        name: str,
+        namespace: str,
+        client: BaseClient,
+        creation_timestamp: datetime,
+    ) -> None:
         self.namespace = namespace
+        self.creation_timestamp = creation_timestamp
         super().__init__(name, client)
         self.commands = {Commands.VIEW_LOG}
 
     async def refresh(self) -> dict[str, Any]:
         return self.items
+
+    @property
+    def label(self) -> Text | str:
+        return Text.assemble(
+            Text("> "),
+            f"{self.name:<50}",
+            Text(
+                f" {self.creation_timestamp.strftime(Pod.DATETIME_OUTPUT)}",
+                "grey54",
+            ),
+        )
 
 
 class NameSpace(BaseK8[Pod]):

@@ -105,7 +105,7 @@ class UpdateableListView(Widget):
         self._listview.append(ListItem(Label(" [Refresh]"), id="update_view"))
 
         for item in self._item.filter_items():
-            self._listview.append(ListItem(Label(f"> {item.name}"), id=item.name))
+            self._listview.append(ListItem(Label(item.label), id=item.name))
         for cmd in self._item.commands:
             self._listview.append(
                 ListItem(Label(f" \[{cmd.value}]"), id=cmd.name)  # noqa

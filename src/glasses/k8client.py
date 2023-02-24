@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from kubernetes import client, config  # type: ignore
 
@@ -55,8 +56,14 @@ class K8Client(BaseClient):
         result: dict[str, Pod] = {}
         for pod in v1_pod_list.items:
             _pod_name = pod.metadata.name
+            _creation_timestamp = pod.metadata.creation_timestamp
 
-            result[_pod_name] = Pod(_pod_name, namespace=namespace, client=self)
+            result[_pod_name] = Pod(
+                _pod_name,
+                namespace=namespace,
+                client=self,
+                creation_timestamp=_creation_timestamp,
+            )
         return result
 
 
@@ -69,8 +76,18 @@ class DummyClient(BaseClient):
 
     async def get_resources(self, namespace: str) -> dict[str, Pod]:
         resources = {
-            "pod_1": Pod(name="pod_1", namespace=namespace, client=self),
-            "pod_2": Pod(name="pod_2", namespace=namespace, client=self),
+            "pod_1": Pod(
+                name="pod_1",
+                namespace=namespace,
+                client=self,
+                creation_timestamp=datetime.now(),
+            ),
+            "pod_2": Pod(
+                name="pod_2",
+                namespace=namespace,
+                client=self,
+                creation_timestamp=datetime.now(),
+            ),
         }
         return resources
 
