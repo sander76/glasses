@@ -8,16 +8,18 @@ TheApp {
     layer: viewer;
 }
 
-SideBar {
-    dock: left;
-    /* width: 64; */
-    height: 100%;
-
+TheApp.-show-sidebar #sidebar {
+    display: block
 }
 
-SlideView {
+#sidebar {
+    dock: left;
+    width: 50%;
     height: 100%;
-    background: $secondary-background-lighten-3;
+    display: none;
+    overflow: auto;
+    overflow-x: auto;
+
 }
 
 LogViewer {
@@ -37,8 +39,4 @@ Button {
     border-bottom: none;
     /* content-align: center top; */
     text-style: bold;
-}
-
-NameSpacesView {
-    width: 100%;
 }

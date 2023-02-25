@@ -69,10 +69,10 @@ class Pod(BaseK8):
     @property
     def label(self) -> Text | str:
         return Text.assemble(
-            Text("> "),
-            f"{self.name:<50}",
+            Text("> ", "green"),
+            self.name,
             Text(
-                f" {self.creation_timestamp.strftime(Pod.DATETIME_OUTPUT)}",
+                f"  [{self.creation_timestamp.strftime(Pod.DATETIME_OUTPUT)}]",
                 "grey54",
             ),
         )

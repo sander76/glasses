@@ -23,7 +23,7 @@ class ModalView(Widget):
 class HelpView(Widget, can_focus=True):
     DEFAULT_CSS = """
     HelpView {
-        background: yellow;
+        background: black;
         layer: modal;
         height: 100%;
         width: 100%;

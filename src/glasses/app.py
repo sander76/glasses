@@ -4,6 +4,7 @@ from typing import Sequence, TypeVar
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.reactive import var
 from textual.widget import Widget
 from textual.widgets import Footer
 
@@ -31,19 +32,19 @@ class SideBar(Widget):
 
 class TheApp(Widget):
     BINDINGS = [
-        Binding("ctrl+right", "width(1)", "Increase Navigator", show=False),
-        Binding("ctrl+left", "width(-1)", "Decrease Navigator", show=False),
+        Binding("ctrl+b", "toggle_sidebar", "Toggle sidebar"),
     ]
 
-    sidebar_width = 60
-    sidebar_min_width = 10
+    show_sidebar = var(True)
+
+    def watch_show_sidebar(self, show_sidebar: bool) -> None:
+        """Called when show_sidebar var value has changed."""
+        self.set_class(show_sidebar, "-show-sidebar")
 
     def __init__(self) -> None:
         super().__init__()
-
         self._log_viewer = LogViewer(dependencies.get_log_reader(settings.logcollector))
-        self._sidebar = SideBar()
-        self._sidebar.styles.width = self.sidebar_width
+        self._sidebar = SideBar(id="sidebar")
 
     def compose(self) -> ComposeResult:
         yield self._sidebar
@@ -65,10 +66,8 @@ class TheApp(Widget):
             start_button = self.query_one("#startlog")
             start_button.focus()
 
-    def action_width(self, by_val: int) -> None:
-        if self.sidebar_width > self.sidebar_min_width or by_val > 0:
-            self.sidebar_width += by_val
-            self._sidebar.styles.width = self.sidebar_width
+    def action_toggle_sidebar(self) -> None:
+        self.show_sidebar = not self.show_sidebar
 
 
 class Viewer(App):
@@ -77,8 +76,6 @@ class Viewer(App):
     CSS_PATH = "app.css"
     BINDINGS = [
         Binding("d", "toggle_dark", "Toggle dark mode", show=False),
-        Binding("ctrl+right", "width(1)", "Increase Navigator", show=False),
-        Binding("ctrl+left", "width(-1)", "Decrease Navigator", show=False),
         ("h", "view_help", "help"),
     ]
 

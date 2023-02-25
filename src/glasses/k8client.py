@@ -72,6 +72,7 @@ class DummyClient(BaseClient):
         return {
             "namespace_1": NameSpace(name="namespace_1", client=self),
             "namespace_2": NameSpace(name="namespace_2", client=self),
+            "namespace_3": NameSpace(name="namespace_3", client=self),
         }
 
     async def get_resources(self, namespace: str) -> dict[str, Pod]:
