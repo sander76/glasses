@@ -2,6 +2,7 @@ import asyncio
 from enum import Enum, auto
 from typing import Any
 
+from rich.console import RenderableType
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
@@ -93,6 +94,8 @@ class LogControl(Widget):
         yield Horizontal(
             Label("pod name: "),
             Input(self._reader.pod, id="pod_name", classes="small_input"),
+            Label("search"),
+            Input(self._reader.highlight_text, id="search", classes="small_input"),
         )
         yield Horizontal(
             Button("log", id="startlog"),
@@ -102,6 +105,7 @@ class LogControl(Widget):
         yield self._logging_state
 
     async def on_input_changed(self, event: Input.Changed) -> None:
+
         if event.input.id == "tail":
             try:
                 value = int(event.value)
@@ -110,12 +114,9 @@ class LogControl(Widget):
                 val.value = str(self._reader.tail)
             else:
                 self._reader.tail = value
-
-    # async def on_input_changed(self, event: Input.Changed):
-    #     if event.input.id == "namespace":
-    #         self._reader.namespace = event.input.value
-    #     elif event.input.id == "pod_name":
-    #         self._reader.pod = event.input.value
+            event.stop()
+        elif event.input.id == "search":
+            self._reader.highlight_text = event.value
 
 
 class LogItem(ListItem):
@@ -125,13 +126,22 @@ class LogItem(ListItem):
         background: $background;
     }
     """
+    highlight_text = reactive("")
 
     def __init__(self, log_item: LogEvent) -> None:
-
-        super().__init__(Label(log_item.parsed))
+        super().__init__()
+        # super().__init__(Label(log_item.parsed))
         self._log_item = log_item
         self.expanded: bool = False
         self._expand_data: Label | None = None
+
+    def render(self) -> RenderableType:
+        # create a copy of the original logline to add highlighting to it.
+        # each time `highlight_text` property has changed it needs to do this again.
+        new_line = self._log_item.parsed.copy()
+        new_line.highlight_regex(self.highlight_text, "black on yellow")
+
+        return new_line
 
     def toggle(self, expand: bool) -> None:
         if expand:
@@ -168,6 +178,7 @@ class LogOutput(Vertical):
         super().__init__()
         self._reader = reader
         self._list_view = ListView()
+        self._reader.subscribe("highlight_text", self.highlight_text)
 
     def action_expand(self) -> None:
         item = self._list_view.highlighted_child
@@ -184,6 +195,11 @@ class LogOutput(Vertical):
         async for line in self._reader.read():
             log_item = LogItem(line)
             self._list_view.append(log_item)
+
+    def highlight_text(self, value: str) -> None:
+        for item in self._list_view.children:
+
+            item.highlight_text = value  # type: ignore
 
     def clear_log(self) -> None:
         self._list_view.clear()
