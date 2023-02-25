@@ -137,7 +137,8 @@ class LogItem(ListItem):
 
     def render(self) -> RenderableType:
         # create a copy of the original logline to add highlighting to it.
-        # each time `highlight_text` property has changed it needs to do this again.
+        # each time `highlight_text` property has changed, the old highlight is
+        # removed by the copy and re-added during this call.
         new_line = self._log_item.parsed.copy()
         new_line.highlight_regex(self.highlight_text, "black on yellow")
 
