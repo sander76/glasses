@@ -11,8 +11,8 @@ from kubernetes_asyncio import client, config
 from rich.json import JSON
 from rich.text import Text
 
-from glasses import plain_text_parser
-from glasses.log_parser import JsonParseError, jsonparse
+from glasses.log_parsers import plain_text_parser
+from glasses.log_parsers.json_parser import JsonParseError, jsonparse
 from glasses.reactive_model import Reactr, ReactrModel
 
 _logger = logging.getLogger(__name__)

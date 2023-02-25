@@ -1,7 +1,7 @@
 import pytest
 
-from glasses import plain_text_parser
-from glasses.log_parser import _parse
+from glasses.log_parsers import plain_text_parser
+from glasses.log_parsers.json_parser import _parse
 
 
 def test_message__parse__returns_valid_string():
