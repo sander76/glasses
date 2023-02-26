@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 from typing import Sequence, TypeVar
 
@@ -11,7 +12,7 @@ from textual.widgets import Footer
 from glasses import dependencies
 from glasses.logger import setup_logging
 from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
-from glasses.settings import LogCollectors, NameSpaceProvider, settings
+from glasses.settings import LogCollectors, NameSpaceProvider
 from glasses.widgets.log_viewer import LogViewer
 from glasses.widgets.modal import HelpView
 from glasses.widgets.nested_list_view import NestedListView
@@ -20,14 +21,17 @@ ID_BTN_REFRESH = "refresh"
 
 Provider = TypeVar("Provider", NameSpace, Cluster)
 
+# TODO: fix the expand logitem
+# TODO: focus logviewer when logging starts. As a result you can directly navigate the log using the arrow keys.
+# TODO: Logviewer: Add checkbox to enable/disable autoscroll.
+# TODO: When sidebar is toggled as visible, give it focus.
+
 
 class SideBar(Widget):
     """Namespaces view."""
 
     def compose(self) -> ComposeResult:
-        yield NestedListView(
-            dependencies.get_namespace_provider(settings.namespace_provider)
-        )
+        yield NestedListView(dependencies.get_namespace_provider())
 
 
 class TheApp(Widget):
@@ -43,7 +47,7 @@ class TheApp(Widget):
 
     def __init__(self) -> None:
         super().__init__()
-        self._log_viewer = LogViewer(dependencies.get_log_reader(settings.logcollector))
+        self._log_viewer = LogViewer(dependencies.get_log_reader())
         self._sidebar = SideBar(id="sidebar")
 
     def compose(self) -> ComposeResult:
@@ -53,15 +57,13 @@ class TheApp(Widget):
 
     async def on_nested_list_view_command(self, event: NestedListView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
-            log_reader = self._log_viewer.reader
+            log_reader = dependencies.get_log_reader()
 
             pod = event.data
             assert isinstance(pod, Pod)
-            podname = pod.name
-            namespace = pod.namespace
 
-            log_reader.pod = podname
-            log_reader.namespace = namespace
+            log_reader.pod = pod.name
+            log_reader.namespace = pod.namespace
 
             start_button = self.query_one("#startlog")
             start_button.focus()
@@ -107,8 +109,10 @@ def run(argv: Sequence[str] | None = None) -> None:
     demo_mode = args.demo_mode
 
     if demo_mode:
-        settings.logcollector = LogCollectors.DUMMY_LOG_COLLECTOR
-        settings.namespace_provider = NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER
+        os.environ["logcollector"] = LogCollectors.DUMMY_LOG_COLLECTOR.value
+        os.environ[
+            "namespace_provider"
+        ] = NameSpaceProvider.DUMMY_NAMESPACE_PROVIDER.value
 
     glasses_folder = Path.home() / ".config" / "glasses"
     glasses_folder.mkdir(exist_ok=True, parents=True)

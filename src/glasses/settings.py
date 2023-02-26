@@ -20,6 +20,3 @@ class Settings(BaseSettings):
     logparser: logparsers = "json"
     logcollector: LogCollectors = LogCollectors.K8_LOG_COLLECTOR
     namespace_provider: NameSpaceProvider = NameSpaceProvider.K8_NAMESPACE_PROVIDER
-
-
-settings = Settings()

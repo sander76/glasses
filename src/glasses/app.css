@@ -40,3 +40,7 @@ Button {
     /* content-align: center top; */
     text-style: bold;
 }
+
+Button:focus {
+    color: $secondary;
+}
