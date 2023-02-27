@@ -1,8 +1,10 @@
 import asyncio
+import logging
 from enum import Enum, auto
 from typing import Any
 
 from rich.console import RenderableType
+from rich.json import JSON
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
@@ -10,6 +12,8 @@ from textual.widget import Widget
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
 from glasses.controllers.log_provider import LogEvent, LogReader
+
+_logger = logging.getLogger(__name__)
 
 
 class State(Enum):
@@ -126,39 +130,29 @@ class LogItem(ListItem):
         background: $background;
     }
     """
-    highlight_text = reactive("")
+    highlight_text = reactive("", layout=False)
+    expanded = reactive(False, layout=True)
 
     def __init__(self, log_item: LogEvent) -> None:
         super().__init__()
-        # super().__init__(Label(log_item.parsed))
         self._log_item = log_item
-        self.expanded: bool = False
-        self._expand_data: Label | None = None
 
     def render(self) -> RenderableType:
         # create a copy of the original logline to add highlighting to it.
         # each time `highlight_text` property has changed, the old highlight is
         # removed by the copy and re-added during this call.
+        _logger.debug("Rendering item %s", str(self._log_item.raw))
         new_line = self._log_item.parsed.copy()
+        if self.expanded:
+
+            new_line.append("\n\n")
+            raw = self._log_item.raw
+            if isinstance(raw, JSON):
+                raw = raw.text
+            new_line.append(raw)
         new_line.highlight_regex(self.highlight_text, "black on yellow")
 
         return new_line
-
-    def toggle(self, expand: bool) -> None:
-        if expand:
-            if self._expand_data is None:
-                self._expand_data = Label(self._log_item.raw)
-                self.mount(self._expand_data)
-
-            self._expand_data.visible = True
-        else:
-            # setting visibility to False does hide the expanded
-            # data, but it does not resize the list item to remove the empty
-            # space. This seems like a bug.
-            if self._expand_data:
-                self._expand_data.visible = False
-
-        self.expanded = not self.expanded
 
 
 class LogOutput(Vertical):
@@ -170,8 +164,8 @@ class LogOutput(Vertical):
         height: 100%;
     }
     LogOutput ListView {
-        overflow-x: scroll;
         background: $background;
+        overflow-x: scroll;
     }
     """
 
@@ -184,7 +178,7 @@ class LogOutput(Vertical):
     def action_expand(self) -> None:
         item = self._list_view.highlighted_child
         assert isinstance(item, LogItem)
-        item.toggle(not item.expanded)
+        item.expanded = not item.expanded
 
     def compose(self) -> ComposeResult:
         yield self._list_view

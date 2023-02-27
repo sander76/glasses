@@ -21,7 +21,7 @@ ID_BTN_REFRESH = "refresh"
 
 Provider = TypeVar("Provider", NameSpace, Cluster)
 
-# TODO: fix the expand logitem
+# TODO: change background color of selected logitem
 # TODO: focus logviewer when logging starts. As a result you can directly navigate the log using the arrow keys.
 # TODO: Logviewer: Add checkbox to enable/disable autoscroll.
 # TODO: When sidebar is toggled as visible, give it focus.
