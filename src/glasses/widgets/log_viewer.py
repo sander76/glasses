@@ -126,7 +126,6 @@ class LogControl(Widget):
 class LogItem(ListItem):
     DEFAULT_CSS = """
     LogItem {
-        width: auto;
         background: $background;
     }
     """
@@ -134,8 +133,18 @@ class LogItem(ListItem):
     expanded = reactive(False, layout=True)
 
     def __init__(self, log_item: LogEvent) -> None:
-        super().__init__()
+
         self._log_item = log_item
+        super().__init__()
+        # an initial width must be set. Otherwise the contents will be fitted inside the listview
+        # potentially wrapping the log line to the width of the listview. Which we do not want.
+        length = self._max_line_width(self._log_item.parsed.plain)
+        self.styles.width = length
+
+    def _max_line_width(self, text: str) -> int:
+        """Get the max line length inside a (multiline) string"""
+        lines = text.split("\n")
+        return max([len(line) for line in lines])
 
     def render(self) -> RenderableType:
         # create a copy of the original logline to add highlighting to it.
