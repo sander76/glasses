@@ -22,9 +22,12 @@ ID_BTN_REFRESH = "refresh"
 Provider = TypeVar("Provider", NameSpace, Cluster)
 
 # TODO: change background color of selected logitem
-# TODO: focus logviewer when logging starts. As a result you can directly navigate the log using the arrow keys.
 # TODO: Logviewer: Add checkbox to enable/disable autoscroll.
-# TODO: When sidebar is toggled as visible, give it focus.
+
+# Replace CTRL-C with CTRL-Q and add confirm
+# CTRL-C clear queue
+# When sidebar is toggled as visible, give it focus.
+# Focus logviewer when logging starts. As a result you can directly navigate the log using the arrow keys.
 
 
 class SideBar(Widget):

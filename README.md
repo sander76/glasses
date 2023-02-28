@@ -2,6 +2,8 @@
 
 A TUI logviewer based on the Textual library. Trying to combine making a useful tool and getting to learn the textual library.
 
+![glasses demo](./readme/glasses.gif)
+
 ## Installation
 
 ```
