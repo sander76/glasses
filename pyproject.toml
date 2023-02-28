@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "glasses"
-version = "0.14.0"
+version = "0.15.0"
 description = ""
 authors = ["Sander Teunissen"]
 readme = "README.md"
