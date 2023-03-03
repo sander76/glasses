@@ -12,7 +12,7 @@ async def dummylogger():
     log_provider.start()
     yield log_provider
 
-    log_provider.stop()
+    await log_provider.stop()
 
 
 @pytest.mark.asyncio

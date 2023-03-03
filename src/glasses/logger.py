@@ -17,7 +17,7 @@ def setup_logging(glasses_folder: Path) -> None:
     logger.setLevel(logging.DEBUG)
 
     file_handler = RotatingFileHandler(
-        logger_folder / "glasses.log", maxBytes=10000, backupCount=5
+        logger_folder / "glasses.log", maxBytes=100000, backupCount=10
     )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(LOG_FORMAT, style="{"))

@@ -12,7 +12,7 @@ class NestedListView(Widget):
     def __init__(self, tree_data: Cluster) -> None:
         super().__init__()
         self.history: list[BaseK8] = [tree_data]
-        self._updateable_list_view = UpdateableListView(tree_data)
+        self._updateable_list_view = UpdateableListView(tree_data, id="nested_list")
 
     def compose(self) -> ComposeResult:
         yield self._updateable_list_view
@@ -74,14 +74,17 @@ class UpdateableListView(Widget):
     }
     """
 
-    def __init__(self, item: BaseK8) -> None:
-        super().__init__()
+    def __init__(self, item: BaseK8, id: str) -> None:
+        super().__init__(id=id)
         self._listview = ListView()
         self._filter = Input(placeholder="filter text")
         self._title = Label("no title")
 
         self._item: BaseK8 = item
         self._delay_update_task: asyncio.Task | None = None
+
+    async def on_show(self) -> None:
+        self._listview.focus()
 
     def compose(self) -> ComposeResult:
         yield self._title

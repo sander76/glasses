@@ -73,6 +73,25 @@ class LogControl(Widget):
     .small_input:focus {
         border: none;
     }
+
+
+    LogControl Button {
+        width: auto;
+        min-width: 20;
+        height: 1;
+        background: $panel;
+        color: $text;
+        border: none;
+        border-top: none;
+        border-bottom: none;
+        /* content-align: center top; */
+        text-style: bold;
+    }
+
+    LogControl Button:focus {
+        color: $secondary;
+    }
+
     """
 
     def __init__(self, reader: LogReader) -> None:
@@ -150,7 +169,6 @@ class LogItem(ListItem):
         # create a copy of the original logline to add highlighting to it.
         # each time `highlight_text` property has changed, the old highlight is
         # removed by the copy and re-added during this call.
-        _logger.debug("Rendering item %s", str(self._log_item.raw))
         new_line = self._log_item.parsed.copy()
         if self.expanded:
 
@@ -181,7 +199,7 @@ class LogOutput(Vertical):
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self._reader = reader
-        self._list_view = ListView()
+        self._list_view = ListView(id="log_output")
         self._reader.subscribe("highlight_text", self.highlight_text)
 
     def action_expand(self) -> None:
@@ -202,7 +220,6 @@ class LogOutput(Vertical):
 
     def highlight_text(self, value: str) -> None:
         for item in self._list_view.children:
-
             item.highlight_text = value  # type: ignore
 
     def clear_log(self) -> None:
@@ -236,6 +253,7 @@ class LogViewer(Static, can_focus=True):
 
     def action_start_logging(self) -> None:
         self.reader.start()
+        self.query_one("#log_output").focus()
 
     async def action_stop_logging(self) -> None:
         await self.reader.stop()

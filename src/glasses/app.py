@@ -13,6 +13,7 @@ from glasses import dependencies
 from glasses.logger import setup_logging
 from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
 from glasses.settings import LogCollectors, NameSpaceProvider
+from glasses.widgets.dialog import QuitScreen
 from glasses.widgets.log_viewer import LogViewer
 from glasses.widgets.modal import HelpView
 from glasses.widgets.nested_list_view import NestedListView
@@ -23,11 +24,8 @@ Provider = TypeVar("Provider", NameSpace, Cluster)
 
 # TODO: change background color of selected logitem
 # TODO: Logviewer: Add checkbox to enable/disable autoscroll.
-
-# Replace CTRL-C with CTRL-Q and add confirm
-# CTRL-C clear queue
-# When sidebar is toggled as visible, give it focus.
-# Focus logviewer when logging starts. As a result you can directly navigate the log using the arrow keys.
+# TODO: When starting new logger, ask whether to stop the previous one first.
+# TODO: Remove first layer from app as it is not needed anymore. (modal screens are displayed in another, more direct way.)
 
 
 class SideBar(Widget):
@@ -93,6 +91,9 @@ class Viewer(App):
     def action_view_help(self) -> None:
         self.mount(HelpView(bindings=self.BINDINGS))
 
+    async def action_quit(self) -> None:
+        self.push_screen(QuitScreen())
+
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -105,6 +106,9 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
     args = parser.parse_args(argv)
     return args
+
+
+app = Viewer()
 
 
 def run(argv: Sequence[str] | None = None) -> None:
