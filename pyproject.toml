@@ -45,7 +45,6 @@ select = [
   "E",
   "F",
   "W",
-  "I", # isort
 ]
 ignore = [
   'E501', # line-length. Black handles this.
@@ -71,4 +70,3 @@ disallow_untyped_defs = false
 
 [tool.isort]
 profile = "black"
-line_length = 120

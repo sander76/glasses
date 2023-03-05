@@ -26,6 +26,9 @@ def fix_quality(session):
     session.run("ruff", PROJECT_FOLDER, "--fix")
     session.run("ruff", "tests", "--fix")
 
+    session.run("isort", PROJECT_FOLDER)
+    session.run("isort", "tests")
+
 
 @nox.session
 def quality(session):

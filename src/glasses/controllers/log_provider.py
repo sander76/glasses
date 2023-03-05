@@ -56,6 +56,7 @@ class LogReader(ReactrModel):
         raise NotImplementedError()
 
     def start(self) -> asyncio.Task:
+
         self._reader = asyncio.create_task(self._read())
         return self._reader
 
