@@ -12,6 +12,8 @@ from textual.widget import Widget
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
 from glasses.controllers.log_provider import LogEvent, LogReader
+from glasses.namespace_provider import Pod
+from glasses.widgets.dialog import DialogResult, StopLoggingScreen, show_dialog
 
 _logger = logging.getLogger(__name__)
 
@@ -243,17 +245,35 @@ class LogViewer(Static, can_focus=True):
         yield self._log_output
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
-
         if event.button.id == "startlog":
-            self.action_start_logging()
+            await self.action_start_logging()
         elif event.button.id == "stoplog":
             await self.action_stop_logging()
         elif event.button.id == "clearlog":
             self.action_clear_log()
 
-    def action_start_logging(self) -> None:
-        self.reader.start()
-        self.query_one("#log_output").focus()
+    async def _check_reading(self) -> bool:
+        if self.reader.is_reading:
+            _continue = await show_dialog(self.app, StopLoggingScreen())
+            if _continue == DialogResult.YES:
+                await self.reader.stop()
+                return True
+            else:
+                return False
+        return True
+
+    async def start(self, pod: Pod) -> None:
+        if await self._check_reading():
+            self.reader.pod = pod.name
+            self.reader.namespace = pod.namespace
+
+            self.reader.start()
+            self.query_one("#log_output").focus()
+
+    async def action_start_logging(self) -> None:
+        if await self._check_reading():
+            self.reader.start()
+            self.query_one("#log_output").focus()
 
     async def action_stop_logging(self) -> None:
         await self.reader.stop()

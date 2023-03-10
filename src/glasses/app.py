@@ -13,12 +13,7 @@ from glasses import dependencies
 from glasses.logger import setup_logging
 from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
 from glasses.settings import LogCollectors, NameSpaceProvider
-from glasses.widgets.dialog import (
-    DialogResult,
-    QuitScreen,
-    StopLoggingScreen,
-    show_dialog,
-)
+from glasses.widgets.dialog import QuitScreen
 from glasses.widgets.log_viewer import LogViewer
 from glasses.widgets.modal import HelpView
 from glasses.widgets.nested_list_view import NestedListView
@@ -63,23 +58,10 @@ class TheApp(Widget):
 
     async def on_nested_list_view_command(self, event: NestedListView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
-            log_reader = dependencies.get_log_reader()
 
             pod = event.data
             assert isinstance(pod, Pod)
-
-            if log_reader.is_reading:
-                _continue = await show_dialog(self.app, StopLoggingScreen())
-                if _continue == DialogResult.YES:
-                    await log_reader.stop()
-                else:
-                    return
-
-            log_reader.pod = pod.name
-            log_reader.namespace = pod.namespace
-
-            start_button = self.query_one("#startlog")
-            start_button.focus()
+            await self._log_viewer.start(pod)
 
     def action_toggle_sidebar(self) -> None:
         self.show_sidebar = not self.show_sidebar

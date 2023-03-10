@@ -60,7 +60,7 @@ class QuestionDialog(Screen):
         raise NotImplementedError()
 
 
-def show_dialog(app: App, dialog: QuestionDialog) -> Awaitable[DialogResult]:
+def show_dialog(app: App, dialog: QuestionDialog) -> Awaitable[None | DialogResult]:
     app.push_screen(dialog)
     loop = asyncio.get_running_loop()
     return loop.create_task(dialog.result())
