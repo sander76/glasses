@@ -149,7 +149,7 @@ class LogData(Text):
         self.expanded: bool = False
         super().__init__()
 
-    def update(self, highlight_text: str) -> int:
+    def update(self, highlight_text: str | None = None) -> int:
         """Update the output of the logdata
 
         Returns:
@@ -164,7 +164,9 @@ class LogData(Text):
                 raw = raw.text
             new_line.append(raw)
 
-        matches = new_line.highlight_regex(highlight_text, "black on yellow")
+        matches = 0
+        if highlight_text is not None:
+            matches = new_line.highlight_regex(highlight_text, "black on yellow")
 
         self.plain = new_line.plain
         self.spans = new_line.spans
@@ -206,7 +208,7 @@ class LogOutput(Widget):
         log_data = LogData(log_event)
         log_key = str(uuid4())
 
-        log_data.update(highlight_text="")
+        log_data.update()
 
         row_key = self.data_table.add_row(
             log_data, key=log_key, height=log_data.row_count
