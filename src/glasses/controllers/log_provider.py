@@ -1,8 +1,6 @@
 import asyncio
-import logging
 from collections import deque
 from enum import Enum, auto
-from itertools import cycle
 from pathlib import Path
 from typing import AsyncIterator, Iterator
 
@@ -10,18 +8,18 @@ from aiohttp import ClientResponse
 from kubernetes_asyncio import client, config
 from rich.json import JSON
 from rich.text import Text
+from textual import log
 
 from glasses.log_parsers import plain_text_parser
 from glasses.log_parsers.json_parser import JsonParseError, jsonparse
 from glasses.reactive_model import Reactr, ReactrModel
 
-_logger = logging.getLogger(__name__)
+# _logger = logging.getLogger(__name__)
 
 
 class LogEvent:
     def __init__(self, raw: str | Text | JSON, parsed: Text) -> None:
         self.raw = raw
-
         self.parsed = parsed
 
 
@@ -98,11 +96,13 @@ class K8LogReader(LogReader):
         try:
             await self.print_pod_log()
         except asyncio.CancelledError:
-            _logger.info("stopped reading the log.")
+            log("stopped reading the log.")
             self.is_reading = False
         except Exception:
-            _logger.exception("an unknown problem occurred while reading the log.")
+            log("an unknown problem occurred while reading the log.")
+
             self.is_reading = False
+            raise
 
     async def print_pod_log(self) -> None:
 
@@ -114,7 +114,7 @@ class K8LogReader(LogReader):
                 self._stream.put_nowait(utf_data)
                 last_lines.append(data)
             except UnicodeDecodeError:
-                _logger.error(f"unable to utf-8 decode {data}")  # type: ignore
+                log.error(f"unable to utf-8 decode {data}")  # type: ignore
                 self._stream.put_nowait(f"[error] Unable to parse incoming logline: {data}")  # type: ignore
 
         async def _read(tail_lines: int, follow: bool) -> None:
@@ -130,16 +130,18 @@ class K8LogReader(LogReader):
             if not follow:
                 while not resp.content.at_eof():
                     ln = await resp.content.readline()
+                    log("reading first batch")
                     _add_to_queue(ln)
                     # last_lines.append(ln)
+                log("finished reading first batch")
             else:
                 reading_state: K8LogReader.ReadingState = (
                     K8LogReader.ReadingState.WAITING_FOR_FIRST_ITEM
                 )
-
+                log("start watching log")
                 while not resp.content.at_eof():
                     line = await resp.content.readline()
-
+                    log("found logline")
                     if reading_state == K8LogReader.ReadingState.WAITING_FOR_FIRST_ITEM:
                         if len(last_lines) == 0:
                             reading_state = K8LogReader.ReadingState.FOUND
@@ -147,7 +149,7 @@ class K8LogReader(LogReader):
                         elif line in last_lines:
                             reading_state = K8LogReader.ReadingState.FOUND
                         else:
-                            _logger.warning(
+                            log.warning(
                                 "Missing overlap of lines between log call and previous log_call. Possibly log lines are lost."
                             )
                             self._stream.put_nowait(
@@ -173,21 +175,20 @@ class K8LogReader(LogReader):
             try:
                 await _read(2, follow=True)
             except asyncio.TimeoutError:
-                _logger.info(
-                    f"timed out while logging pod {self.pod} on {self.namespace}"
-                )
+                log.info(f"timed out while logging pod {self.pod} on {self.namespace}")
 
 
 class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
-        self.delay: float = 0.2
+        self.delay: float = 0.001
 
     @staticmethod
     def log_data() -> Iterator:
         with open(Path(__file__).parent / "log_data.txt") as fl:
             data = fl.read().split("\n")
-        return cycle(data)
+        for i in range(1000):
+            yield from data
 
     async def _read(self) -> None:
         self.is_reading = True
@@ -198,4 +199,4 @@ class DummyLogReader(LogReader):
                 await self._stream.put(line)
         except asyncio.CancelledError:
             self.is_reading = False
-            _logger.info("stopped logger input")
+            log.info("stopped logger input")

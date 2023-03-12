@@ -1,21 +1,20 @@
 import asyncio
-import logging
 from enum import Enum, auto
 from typing import Any
+from uuid import uuid4
 
-from rich.console import RenderableType
 from rich.json import JSON
+from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, ListItem, ListView, Static
+from textual.widgets import Button, DataTable, Input, Label, Static
+from textual.widgets.data_table import ColumnKey, RowKey
 
 from glasses.controllers.log_provider import LogEvent, LogReader
 from glasses.namespace_provider import Pod
 from glasses.widgets.dialog import DialogResult, StopLoggingScreen, show_dialog
-
-_logger = logging.getLogger(__name__)
 
 
 class State(Enum):
@@ -144,88 +143,116 @@ class LogControl(Widget):
             self._reader.highlight_text = event.value
 
 
-class LogItem(ListItem):
-    DEFAULT_CSS = """
-    LogItem {
-        background: $background;
-    }
-    """
-    highlight_text = reactive("", layout=False)
-    expanded = reactive(False, layout=True)
-
-    def __init__(self, log_item: LogEvent) -> None:
-
-        self._log_item = log_item
+class LogData(Text):
+    def __init__(self, log_event: LogEvent) -> None:
+        self.log_event = log_event
+        self.expanded: bool = False
         super().__init__()
-        # an initial width must be set. Otherwise the contents will be fitted inside the listview
-        # potentially wrapping the log line to the width of the listview. Which we do not want.
-        length = self._max_line_width(self._log_item.parsed.plain)
-        self.styles.width = length
 
-    def _max_line_width(self, text: str) -> int:
-        """Get the max line length inside a (multiline) string"""
-        lines = text.split("\n")
-        return max([len(line) for line in lines])
+    def update(self, highlight_text: str) -> int:
+        """Update the output of the logdata
 
-    def render(self) -> RenderableType:
-        # create a copy of the original logline to add highlighting to it.
-        # each time `highlight_text` property has changed, the old highlight is
-        # removed by the copy and re-added during this call.
-        new_line = self._log_item.parsed.copy()
+        Returns:
+            the amount of highlight_text matches.
+        """
+        new_line = self.log_event.parsed.copy()
         if self.expanded:
 
             new_line.append("\n\n")
-            raw = self._log_item.raw
+            raw = self.log_event.raw
             if isinstance(raw, JSON):
                 raw = raw.text
             new_line.append(raw)
-        new_line.highlight_regex(self.highlight_text, "black on yellow")
 
-        return new_line
+        matches = new_line.highlight_regex(highlight_text, "black on yellow")
+
+        self.plain = new_line.plain
+        self.spans = new_line.spans
+
+        return matches
+
+    @property
+    def row_count(self) -> int:
+        return len(self.plain.split("\n"))
 
 
-class LogOutput(Vertical):
+class LogOutput(Widget):
     BINDINGS = [("x", "expand", "Expand")]
-
     DEFAULT_CSS = """
-    LogOutput {
-        width: 100%;
-        height: 100%;
-    }
-    LogOutput ListView {
-        background: $background;
-        overflow-x: scroll;
+    #log_output >  .datatable--cursor {
+        background: $secondary-background-darken-1 ;
+        color: $text;
     }
     """
 
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self._reader = reader
-        self._list_view = ListView(id="log_output")
-        self._reader.subscribe("highlight_text", self.highlight_text)
-
-    def action_expand(self) -> None:
-        item = self._list_view.highlighted_child
-        assert isinstance(item, LogItem)
-        item.expanded = not item.expanded
-
-    def compose(self) -> ComposeResult:
-        yield self._list_view
+        self.data_table = DataTable[LogData](id="log_output")
+        self.data_table.cursor_type = "row"
+        self._current_row_key: RowKey | None = None
+        self._log_cache: dict[RowKey, LogData] = {}
+        self._columns: list[ColumnKey] = []
 
     def on_mount(self, event: Any) -> None:
+        self._columns = self.data_table.add_columns("log output")
+        self.data_table.show_header = False  # unable to set this during datatable init.
         asyncio.create_task(self._watch_log())
 
-    async def _watch_log(self) -> None:
-        async for line in self._reader.read():
-            log_item = LogItem(line)
-            self._list_view.append(log_item)
+    def compose(self) -> ComposeResult:
+        yield self.data_table
 
-    def highlight_text(self, value: str) -> None:
-        for item in self._list_view.children:
-            item.highlight_text = value  # type: ignore
+    async def add_item(self, log_event: LogEvent) -> None:
+        log_data = LogData(log_event)
+        log_key = str(uuid4())
+
+        log_data.update(highlight_text="")
+
+        row_key = self.data_table.add_row(
+            log_data, key=log_key, height=log_data.row_count
+        )
+        self._log_cache[row_key] = log_data
+
+    async def _watch_log(self) -> None:
+        async for log_event in self._reader.read():
+            await self.add_item(log_event)
+
+    def on_data_table_row_selected(self, message: DataTable.RowSelected) -> None:
+        message.stop()
+        self.current_row = message.row_key
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        event.stop()
+        self.current_row = event.row_key
+
+    def action_expand(self) -> None:
+        if self.current_row is None:
+            return
+
+        _corresponding_data = self._log_cache[self.current_row]
+        _corresponding_data.expanded = not _corresponding_data.expanded
+
+        _corresponding_data.update(highlight_text="")
+
+        self.data_table.rows[self.current_row].height = _corresponding_data.row_count
+
+        self.data_table.update_cell(
+            column_key=self._columns[0],
+            row_key=self.current_row,
+            value=_corresponding_data,
+            update_width=True,
+        )
+
+    def highlight_text(self, text: str) -> None:
+        for row_key, data in self._log_cache.items():
+            data.update(highlight_text=text)
+            self.data_table.update_cell(
+                column_key=self._columns[0], row_key=row_key, value=data
+            )
 
     def clear_log(self) -> None:
-        self._list_view.clear()
+        self._log_cache = {}
+        self.data_table.clear()
 
 
 class LogViewer(Static, can_focus=True):
@@ -251,6 +278,11 @@ class LogViewer(Static, can_focus=True):
             await self.action_stop_logging()
         elif event.button.id == "clearlog":
             self.action_clear_log()
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        event.stop()
+        if event.input.id == "search":
+            self._log_output.highlight_text(event.value)
 
     async def _check_reading(self) -> bool:
         if self.reader.is_reading:
