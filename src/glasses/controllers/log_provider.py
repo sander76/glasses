@@ -187,7 +187,7 @@ class DummyLogReader(LogReader):
     def log_data() -> Iterator:
         with open(Path(__file__).parent / "log_data.txt") as fl:
             data = fl.read().split("\n")
-        for i in range(1000):
+        for i in range(1):
             yield from data
 
     async def _read(self) -> None:

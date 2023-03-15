@@ -302,21 +302,6 @@ colorama = {version = "*", markers = "sys_platform == \"win32\""}
 development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
-name = "commonmark"
-version = "0.9.1"
-description = "Python parser for the CommonMark Markdown spec"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9"},
-    {file = "commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60"},
-]
-
-[package.extras]
-test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
-
-[[package]]
 name = "distlib"
 version = "0.3.6"
 description = "Distribution utilities"
@@ -1576,22 +1561,22 @@ rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
 [[package]]
 name = "rich"
-version = "13.1.0"
+version = "13.3.2"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "rich-13.1.0-py3-none-any.whl", hash = "sha256:f846bff22a43e8508aebf3f0f2410ce1c6f4cde429098bd58d91fde038c57299"},
-    {file = "rich-13.1.0.tar.gz", hash = "sha256:81c73a30b144bbcdedc13f4ea0b6ffd7fdc3b0d3cc259a9402309c8e4aee1964"},
+    {file = "rich-13.3.2-py3-none-any.whl", hash = "sha256:a104f37270bf677148d8acb07d33be1569eeee87e2d1beb286a4e9113caf6f2f"},
+    {file = "rich-13.3.2.tar.gz", hash = "sha256:91954fe80cfb7985727a467ca98a7618e5dd15178cc2da10f553b36a93859001"},
 ]
 
 [package.dependencies]
-commonmark = ">=0.9.0,<0.10.0"
-pygments = ">=2.6.0,<3.0.0"
+markdown-it-py = ">=2.2.0,<3.0.0"
+pygments = ">=2.13.0,<3.0.0"
 
 [package.extras]
-jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
+jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rsa"
@@ -1665,14 +1650,14 @@ files = [
 
 [[package]]
 name = "textual"
-version = "0.11.1"
+version = "0.15.1"
 description = "Modern Text User Interface framework"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "textual-0.11.1-py3-none-any.whl", hash = "sha256:77afbb64caa136fdc568ee43601fd5a1a94f13bb7e057c95dc8ee5dfa3f3083b"},
-    {file = "textual-0.11.1.tar.gz", hash = "sha256:9b027853b686ac9561a3dc6f2b637a25089f2ee67a9e37bbf39d0da7567694b0"},
+    {file = "textual-0.15.1-py3-none-any.whl", hash = "sha256:be79dd8d7f3f5b5c40893da4d5d8228e54c5c9f7b844abfb0e8a13ce2b3a7930"},
+    {file = "textual-0.15.1.tar.gz", hash = "sha256:b86d4668a072fc85092f081e157e1e7575b353b2f6b728755752bbbe23123063"},
 ]
 
 [package.dependencies]
@@ -1683,7 +1668,7 @@ markdown-it-py = {version = ">=2.1.0,<3.0.0", extras = ["linkify", "plugins"]}
 mkdocs-exclude = ">=1.0.2,<2.0.0"
 msgpack = {version = ">=1.0.3", optional = true, markers = "extra == \"dev\""}
 rich = ">12.6.0"
-typing-extensions = ">=4.0.0,<5.0.0"
+typing-extensions = ">=4.4.0,<5.0.0"
 
 [package.extras]
 dev = ["aiohttp (>=3.8.1)", "click (>=8.1.2)", "msgpack (>=1.0.3)"]
@@ -1942,4 +1927,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "59734468b67d8062c21cfd49a76a31681c45bc9b7089c70576411510d6284da7"
+content-hash = "25661e1000ec56992726ac29771c18c5d7014bb5f9b20dcb61a677c85c83e4d8"
