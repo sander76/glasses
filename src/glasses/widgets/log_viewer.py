@@ -204,20 +204,50 @@ class LogOutput(Widget):
     def compose(self) -> ComposeResult:
         yield self.data_table
 
-    async def add_item(self, log_event: LogEvent) -> None:
-        log_data = LogData(log_event)
-        log_key = str(uuid4())
+    async def add_item(self, log_events: list[LogEvent]) -> None:
+        for log_event in log_events:
+            log_data = LogData(log_event)
+            log_key = str(uuid4())
 
-        log_data.update()
-
-        row_key = self.data_table.add_row(
-            log_data, key=log_key, height=log_data.row_count
-        )
-        self._log_cache[row_key] = log_data
+            log_data.update()
+            row_key = self.data_table.add_row(
+                log_data, key=log_key, height=log_data.row_count
+            )
+            self._log_cache[row_key] = log_data
 
     async def _watch_log(self) -> None:
+        delay = 0.5  # second
+        max_item_length = 100
+
+        send_task: asyncio.Task | None = None
+        log_items: list[LogEvent] = []
+
+        is_sending: bool = False
+        sending: asyncio.Event = asyncio.Event()
+
+        async def send_with_delay() -> None:
+            nonlocal log_items
+            nonlocal is_sending
+            try:
+                if not len(log_items) >= max_item_length:
+                    await asyncio.sleep(delay)
+                is_sending = True
+                await self.add_item(log_items)
+
+                is_sending = False
+                log_items = []
+                sending.set()
+            except asyncio.CancelledError:
+                self.log("Stopping sending with delay task.")
+
         async for log_event in self._reader.read():
-            await self.add_item(log_event)
+            if send_task:
+                if is_sending:
+                    await sending.wait()
+                else:
+                    send_task.cancel()
+            log_items.append(log_event)
+            send_task = asyncio.create_task(send_with_delay())
 
     def on_data_table_row_selected(self, message: DataTable.RowSelected) -> None:
         message.stop()
