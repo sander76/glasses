@@ -181,13 +181,13 @@ class K8LogReader(LogReader):
 class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
-        self.delay: float = 0.001
+        self.delay: float = 0.01
 
     @staticmethod
     def log_data() -> Iterator:
         with open(Path(__file__).parent / "log_data.txt") as fl:
             data = fl.read().split("\n")
-        for i in range(1):
+        for i in range(1000):
             yield from data
 
     async def _read(self) -> None:
