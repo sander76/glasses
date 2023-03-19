@@ -186,3 +186,7 @@ async def test_log_event_expand__lines__success(console):
     line_cache.update_log_data(0)
 
     assert line_cache.line_count == 4  # Expanded logevent has an empty line added.
+    assert line_cache.log_data_from_line_index(0) is line_cache[0]
+    assert line_cache.log_data_from_line_index(1) is line_cache[0]
+    assert line_cache.log_data_from_line_index(2) is line_cache[0]
+    assert line_cache.log_data_from_line_index(3) is line_cache[1]

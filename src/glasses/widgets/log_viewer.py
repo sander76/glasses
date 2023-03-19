@@ -467,7 +467,7 @@ class LogOutput(ScrollView, can_focus=True):
         self.current_row -= 1
 
     async def _on_click(self, event: events.Click) -> None:
-        self.current_row = event.y
+        self.current_row = self._line_cache.log_data_from_line_index(event.y)
         # meta = event.style.meta
         # if "line" in meta:
         #     cursor_line = meta["line"]
