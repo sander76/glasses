@@ -44,26 +44,24 @@ class NestedListView(Widget):
         elif self.history[-1].items and id in self.history[-1].items:
             await self._new_view(id)
         elif Commands[id] in self.history[-1].commands:
-            await self.post_message(
-                NestedListView.Command(self, data=self.history[-1], id=Commands[id])
+            self.post_message(
+                NestedListView.Command(data=self.history[-1], id=Commands[id])
             )
             print("sent")
         else:
             print("nothing found.")
 
     class Selected(Message):
-        def __init__(self, sender: "NestedListView", data: BaseK8, id: str) -> None:
-            super().__init__(sender)
+        def __init__(self, data: BaseK8, id: str) -> None:
             self.data = data
             self.id = id
+            super().__init__()
 
     class Command(Message):
-        def __init__(
-            self, sender: "NestedListView", data: BaseK8, id: Commands
-        ) -> None:
-            super().__init__(sender)
+        def __init__(self, data: BaseK8, id: Commands) -> None:
             self.data = data
             self.id = id
+            super().__init__()
 
 
 class UpdateableListView(Widget):
