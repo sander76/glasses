@@ -176,9 +176,9 @@ async def test_log_event_expand__lines__success(console):
     await line_cache.add_log_events([log_event1, log_event2])
 
     assert line_cache.line_count == 2
-    assert line_cache.line_count == len(line_cache._log_lines_log_data_mapping)
-    assert line_cache.log_data_from_line_index(0) is line_cache[0]
-    assert line_cache.log_data_from_line_index(1) is line_cache[1]
+    assert line_cache.line_count == len(line_cache._log_lines_idx__log_data_idx)
+    assert line_cache.log_data_index_from_line_index(0) == 0
+    assert line_cache.log_data_index_from_line_index(1) == 1
 
     first_log_data = line_cache[0]
     first_log_data.expanded = True
@@ -186,11 +186,7 @@ async def test_log_event_expand__lines__success(console):
     line_cache.update_log_data(0)
 
     assert line_cache.line_count == 4  # Expanded logevent has an empty line added.
-    assert line_cache.log_data_from_line_index(0) is line_cache[0]
-    assert line_cache.log_data_from_line_index(1) is line_cache[0]
-    assert line_cache.log_data_from_line_index(2) is line_cache[0]
-    assert line_cache.log_data_from_line_index(3) is line_cache[1]
-
+    assert len(line_cache._log_lines_idx__log_data_idx) == 4
     assert line_cache.log_data_index_from_line_index(0) == 0
     assert line_cache.log_data_index_from_line_index(1) == 0
     assert line_cache.log_data_index_from_line_index(2) == 0

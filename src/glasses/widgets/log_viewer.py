@@ -272,16 +272,15 @@ class LineCache:
 
         # A list which is kept in sync with the above _log_lines list.
         # The list indices correspond to the log_lines. The value
-        # corresponds to the associated LogData
-        #
+        # corresponds to the index of the log_data list
+
         # idx   value
-        # 0     LogData[1]
-        # 1     LogData[1]
-        # 2     LogData[2]
+        # 0     1  -> logline 0 corresponds with log_data 1
+        # 1     1  -> logline 1 corresponds with log_data 1
+        # 2     2  -> logline 2 corresponds with log_data 2
         #
         # Using the above example it is easy to get the logdata
         # based on the provided log_line_index.
-        self._log_lines_log_data_mapping: list[LogData] = []
         self._log_lines_idx__log_data_idx: list[int] = []
 
         self._max_width: int = 0
@@ -306,17 +305,6 @@ class LineCache:
 
     def line(self, line_idx: int) -> Strip:
         return self._log_lines[line_idx]
-
-    def log_data_from_line_index(self, log_line_index: int) -> LogData:
-        """Return a LogData object based on a log_line index
-
-        Args:
-            log_line: line index
-
-        Returns:
-            LogData instance
-        """
-        return self._log_lines_log_data_mapping[log_line_index]
 
     def log_data_index_from_line_index(self, log_line_index: int) -> int:
         """Return the index of the logdata list based on a provided line_index."""
@@ -344,9 +332,6 @@ class LineCache:
         are not valid anymore."""
         log_data = self._log_data[log_data_idx]
         valid_log_lines = self._log_lines[: log_data.line_index]
-        valid_log_lines_log_data_mappings = self._log_lines_log_data_mapping[
-            : log_data.line_index
-        ]
         valid_log_lines_idx__log_data_idx = self._log_lines_idx__log_data_idx[
             : log_data.line_index
         ]
@@ -355,13 +340,11 @@ class LineCache:
             log_data.line_index = len(valid_log_lines)
             valid_log_lines.extend(log_data._lines)
 
-            valid_log_lines_log_data_mappings.extend(log_data.line_count * [log_data])
             valid_log_lines_idx__log_data_idx.extend(
                 log_data.line_count * [idx + log_data_idx]
             )
 
         self._log_lines = valid_log_lines
-        self._log_lines_log_data_mapping = valid_log_lines_log_data_mappings
         self._log_lines_idx__log_data_idx = valid_log_lines_idx__log_data_idx
 
     async def add_log_events(self, log_events: list[LogEvent]) -> Size:
@@ -384,7 +367,6 @@ class LineCache:
             log_data.line_index = len(self._log_lines)
 
             self._log_lines.extend(log_data.lines)
-            self._log_lines_log_data_mapping.extend(log_data.line_count * [log_data])
             self._log_lines_idx__log_data_idx.extend(
                 log_data.line_count * [last_log_data_index + idx]
             )
