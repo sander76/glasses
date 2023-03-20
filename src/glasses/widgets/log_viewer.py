@@ -4,7 +4,6 @@ from typing import NamedTuple
 
 from rich.console import Console, ConsoleOptions
 from rich.json import JSON
-from rich.measure import measure_renderables
 from rich.style import Style
 from textual import events, log
 from textual.app import ComposeResult
@@ -236,17 +235,16 @@ class LogData:
 
             self._render_stages["highlight"] = _line
 
-        render_width = measure_renderables(
-            self._console, self._render_settings, [self._render_stages["highlight"]]
-        ).maximum
-        self._max_width = max(self._max_width, render_width)
+        lines = self._render_stages["highlight"].split()
+
+        self._max_width = max((line.cell_len for line in lines))
         segments = self._console.render_lines(
             self._render_stages["highlight"],
-            options=self._render_settings.update_width(render_width),
+            options=self._render_settings.update_width(self._max_width),
         )
 
         # this should be cached too.
-        self._lines = [Strip(segment, cell_length=render_width) for segment in segments]
+        self._lines = [Strip(segment, self._max_width) for segment in segments]
 
         self._current_state = self.get_current_state()
         return old_line_length != self.line_count
@@ -470,6 +468,9 @@ class LogOutput(ScrollView, can_focus=True):
 
     async def _on_click(self, event: events.Click) -> None:
         corresponding_line_index = self.scroll_offset.y + event.y
+        if corresponding_line_index > self._line_cache.line_count:
+            # You clicked on the screen, but there was no log_data there.
+            return
         self.current_row = self._line_cache.log_data_index_from_line_index(
             corresponding_line_index
         )
@@ -491,6 +492,10 @@ class LogOutput(ScrollView, can_focus=True):
         size = await self._line_cache.add_log_events(log_events)
 
         self.virtual_size = size
+
+    def clear_log(self) -> None:
+        self._line_cache = LineCache(self._console, self._rich_style)
+        self.refresh()
 
     async def _watch_log(self) -> None:
         delay = 0.2  # second
@@ -541,12 +546,6 @@ class LogOutput(ScrollView, can_focus=True):
     #             column_key=self._columns[0], row_key=row_key, value=data
     #         )
 
-    # def clear_log(self) -> None:
-    #     self._log_cache = []
-    #     self._log_lines = []
-    #     self._max_width = 0
-    #     self.virtual_size = Size(self._max_width, len(self._log_lines))
-
 
 class LogViewer(Static, can_focus=True):
     BINDINGS = [
@@ -593,7 +592,7 @@ class LogViewer(Static, can_focus=True):
             self.reader.namespace = pod.namespace
 
             self.reader.start()
-            # self.query_one("#log_output").focus()
+            self._log_output.focus()
 
     async def action_start_logging(self) -> None:
         if await self._check_reading():
