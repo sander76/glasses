@@ -1,6 +1,6 @@
 import asyncio
 from enum import Enum, auto
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 from rich.console import Console, ConsoleOptions
 from rich.json import JSON
@@ -397,10 +397,11 @@ class LogOutput(ScrollView, can_focus=True):
         super().__init__()
         self._reader = reader
 
-    def on_mount(self, event: Any) -> None:
+    def on_mount(self) -> None:
         self._rich_style = self.get_component_rich_style("logoutput--highlight")
         self._line_cache = LineCache(self.app.console, self._rich_style)
         asyncio.create_task(self._watch_log())
+        super().on_mount()
 
     @staticmethod
     def new_scroll(
@@ -472,17 +473,6 @@ class LogOutput(ScrollView, can_focus=True):
         self.current_row = self._line_cache.log_data_index_from_line_index(
             corresponding_line_index
         )
-        # meta = event.style.meta
-        # if "line" in meta:
-        #     cursor_line = meta["line"]
-        #     if meta.get("toggle", False):
-        #         node = self.get_node_at_line(cursor_line)
-        #         if node is not None:
-        #             self._toggle_node(node)
-
-        #     else:
-        #         self.cursor_line = cursor_line
-        #         await self.run_action("select_cursor")
 
     def render_line(self, y: int) -> Strip:
         scroll_x, scroll_y = self.scroll_offset
@@ -536,23 +526,13 @@ class LogOutput(ScrollView, can_focus=True):
             log_items.append(log_event)
             send_task = asyncio.create_task(send_with_delay())
 
-    # def action_expand(self) -> None:
-    #     if self.current_row is None:
-    #         return
-
-    #     _corresponding_data = self._log_cache[self.current_row]
-    #     _corresponding_data.expanded = not _corresponding_data.expanded
-
-    #     _corresponding_data.update(highlight_text="")
-
-    #     self.data_table.rows[self.current_row].height = _corresponding_data.row_count
-
-    #     self.data_table.update_cell(
-    #         column_key=self._columns[0],
-    #         row_key=self.current_row,
-    #         value=_corresponding_data,
-    #         update_width=True,
-    #     )
+    def action_expand(self) -> None:
+        if self.current_row < 0:
+            return
+        log_data = self._line_cache[self.current_row]
+        log_data.expanded = not log_data.expanded
+        self._line_cache.update_log_data(self.current_row)
+        self.refresh()
 
     # def highlight_text(self, text: str) -> None:
     #     for row_key, data in self._log_cache.items():
