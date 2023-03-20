@@ -190,3 +190,8 @@ async def test_log_event_expand__lines__success(console):
     assert line_cache.log_data_from_line_index(1) is line_cache[0]
     assert line_cache.log_data_from_line_index(2) is line_cache[0]
     assert line_cache.log_data_from_line_index(3) is line_cache[1]
+
+    assert line_cache.log_data_index_from_line_index(0) == 0
+    assert line_cache.log_data_index_from_line_index(1) == 0
+    assert line_cache.log_data_index_from_line_index(2) == 0
+    assert line_cache.log_data_index_from_line_index(3) == 1

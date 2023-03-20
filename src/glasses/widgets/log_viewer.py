@@ -282,6 +282,7 @@ class LineCache:
         # Using the above example it is easy to get the logdata
         # based on the provided log_line_index.
         self._log_lines_log_data_mapping: list[LogData] = []
+        self._log_lines_idx__log_data_idx: list[int] = []
 
         self._max_width: int = 0
         self._console = console
@@ -317,6 +318,12 @@ class LineCache:
         """
         return self._log_lines_log_data_mapping[log_line_index]
 
+    def log_data_index_from_line_index(self, log_line_index: int) -> int:
+        """Return the index of the logdata list based on a provided line_index."""
+
+        log_data_index = self._log_lines_idx__log_data_idx[log_line_index]
+        return log_data_index
+
     def update_log_data(self, log_data_idx: int) -> Size:
         log_data = self._log_data[log_data_idx]
 
@@ -340,14 +347,22 @@ class LineCache:
         valid_log_lines_log_data_mappings = self._log_lines_log_data_mapping[
             : log_data.line_index
         ]
+        valid_log_lines_idx__log_data_idx = self._log_lines_idx__log_data_idx[
+            : log_data.line_index
+        ]
 
-        for log_data in self._log_data[log_data_idx:]:
+        for idx, log_data in enumerate(self._log_data[log_data_idx:]):
             log_data.line_index = len(valid_log_lines)
             valid_log_lines.extend(log_data._lines)
+
             valid_log_lines_log_data_mappings.extend(log_data.line_count * [log_data])
+            valid_log_lines_idx__log_data_idx.extend(
+                log_data.line_count * [idx + log_data_idx]
+            )
 
         self._log_lines = valid_log_lines
         self._log_lines_log_data_mapping = valid_log_lines_log_data_mappings
+        self._log_lines_idx__log_data_idx = valid_log_lines_idx__log_data_idx
 
     async def add_log_events(self, log_events: list[LogEvent]) -> Size:
 
@@ -364,11 +379,15 @@ class LineCache:
         )
 
     def _update_lines(self, log_datas: list[LogData]) -> Size:
-        for log_data in log_datas:
+        last_log_data_index = self.log_data_count
+        for idx, log_data in enumerate(log_datas):
             log_data.line_index = len(self._log_lines)
 
             self._log_lines.extend(log_data.lines)
             self._log_lines_log_data_mapping.extend(log_data.line_count * [log_data])
+            self._log_lines_idx__log_data_idx.extend(
+                log_data.line_count * [last_log_data_index + idx]
+            )
             self._log_data.append(log_data)
 
             self._max_width = max(self._max_width, log_data.max_width)
@@ -467,7 +486,10 @@ class LogOutput(ScrollView, can_focus=True):
         self.current_row -= 1
 
     async def _on_click(self, event: events.Click) -> None:
-        self.current_row = self._line_cache.log_data_from_line_index(event.y)
+        corresponding_line_index = self.scroll_offset.y + event.y
+        self.current_row = self._line_cache.log_data_index_from_line_index(
+            corresponding_line_index
+        )
         # meta = event.style.meta
         # if "line" in meta:
         #     cursor_line = meta["line"]
@@ -499,7 +521,7 @@ class LogOutput(ScrollView, can_focus=True):
         self.virtual_size = size
 
     async def _watch_log(self) -> None:
-        delay = 0.5  # second
+        delay = 0.2  # second
         max_item_length = 100
 
         send_task: asyncio.Task | None = None

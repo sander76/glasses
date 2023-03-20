@@ -181,7 +181,7 @@ class K8LogReader(LogReader):
 class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
-        self.delay: float = 0.01
+        self.delay: float = 0.001
 
     @staticmethod
     def log_data() -> Iterator:
