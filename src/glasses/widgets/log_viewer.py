@@ -210,11 +210,15 @@ class LogData:
             new_line = self.log_event.parsed.copy()
             if self.expanded:
 
-                new_line.append("\n\n")
+                new_line.append("\n")
                 raw = self.log_event.raw
                 if isinstance(raw, JSON):
                     raw = raw.text
                 new_line.append(raw)
+                new_line.append("\n")
+
+            lines = new_line.split()
+            self._max_width = max((line.cell_len for line in lines))
             self._render_stages["newline"] = new_line
 
         if stage in ["full", "search"]:
@@ -235,9 +239,6 @@ class LogData:
 
             self._render_stages["highlight"] = _line
 
-        lines = self._render_stages["highlight"].split()
-
-        self._max_width = max((line.cell_len for line in lines))
         segments = self._console.render_lines(
             self._render_stages["highlight"],
             options=self._render_settings.update_width(self._max_width),
@@ -289,6 +290,10 @@ class LineCache:
 
         self._highlight_style = highlight_style
 
+    @property
+    def log_data(self) -> list[LogData]:
+        return self._log_data
+
     def __getitem__(self, key: int) -> LogData:
         return self._log_data[key]
 
@@ -322,6 +327,11 @@ class LineCache:
             for idx, line in enumerate(log_data.lines):
                 self._log_lines[start_idx + idx] = line
         return Size(self._max_width, len(self._log_lines))
+
+    def highligh_search_text(self, text: str) -> int:
+        for idx, log_data in enumerate(self.log_data):
+            log_data.search_text = text
+            self.update_log_data(idx)
 
     def _re_index_from(self, log_data_idx: int) -> None:
         """Reindex the log lines.
@@ -488,7 +498,7 @@ class LogOutput(ScrollView, can_focus=True):
         line = self._line_cache.line(y)
         return line.crop(scroll_x, scroll_x + width)
 
-    async def add_item(self, log_events: list[LogEvent]) -> None:
+    async def add_log_event(self, log_events: list[LogEvent]) -> None:
         size = await self._line_cache.add_log_events(log_events)
 
         self.virtual_size = size
@@ -539,12 +549,9 @@ class LogOutput(ScrollView, can_focus=True):
         self._line_cache.update_log_data(self.current_row)
         self.refresh()
 
-    # def highlight_text(self, text: str) -> None:
-    #     for row_key, data in self._log_cache.items():
-    #         data.update(highlight_text=text)
-    #         self.data_table.update_cell(
-    #             column_key=self._columns[0], row_key=row_key, value=data
-    #         )
+    def highlight(self, search_text: str) -> None:
+        self._line_cache.highligh_search_text(search_text)
+        self.refresh()
 
 
 class LogViewer(Static, can_focus=True):
@@ -574,7 +581,7 @@ class LogViewer(Static, can_focus=True):
     async def on_input_changed(self, event: Input.Changed) -> None:
         event.stop()
         if event.input.id == "search":
-            self._log_output.highlight_text(event.value)
+            self._log_output.highlight(event.value)
 
     async def _check_reading(self) -> bool:
         if self.reader.is_reading:
@@ -597,7 +604,6 @@ class LogViewer(Static, can_focus=True):
     async def action_start_logging(self) -> None:
         if await self._check_reading():
             self.reader.start()
-            # self.query_one("#log_output").focus()
 
     async def action_stop_logging(self) -> None:
         await self.reader.stop()

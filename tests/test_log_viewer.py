@@ -191,3 +191,17 @@ async def test_log_event_expand__lines__success(console):
     assert line_cache.log_data_index_from_line_index(1) == 0
     assert line_cache.log_data_index_from_line_index(2) == 0
     assert line_cache.log_data_index_from_line_index(3) == 1
+
+
+@pytest.mark.asyncio
+async def test_log_event_search_test__lines__are_updated(console):
+    log_event1 = LogEvent("Log event 1", Text("Log event 1"))
+    log_event2 = LogEvent("Log event 2", Text("Log event 2"))
+
+    line_cache = LineCache(console, Style())
+    await line_cache.add_log_events([log_event1, log_event2])
+
+    line_cache.highligh_search_text("event 1")
+
+    first_log_line = line_cache.line(0)
+    print(first_log_line)

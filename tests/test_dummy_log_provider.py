@@ -9,6 +9,7 @@ from glasses.controllers.log_provider import DummyLogReader, LogEvent
 async def dummylogger():
     log_provider = DummyLogReader()
     log_provider.delay = 0.01
+    log_provider.range = 10
     log_provider.start()
     yield log_provider
 

@@ -182,12 +182,12 @@ class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
         self.delay: float = 0.001
+        self.range: int = 1
 
-    @staticmethod
-    def log_data() -> Iterator:
+    def log_data(self) -> Iterator:
         with open(Path(__file__).parent / "log_data.txt") as fl:
             data = fl.read().split("\n")
-        for i in range(1000):
+        for i in range(self.range):
             yield from data
 
     async def _read(self) -> None:
