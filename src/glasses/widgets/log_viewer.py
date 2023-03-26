@@ -5,6 +5,7 @@ from typing import NamedTuple
 from rich.console import Console, ConsoleOptions
 from rich.json import JSON
 from rich.style import Style
+from rich.text import Text
 from textual import events, log
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -151,10 +152,13 @@ class StateCache(NamedTuple):
     expanded: bool
     search_text: str
     highlight: bool
-    # line_count: int
 
 
 class LogData:
+    STAGE_FULL = "full"
+    STAGE_SEARCH = "search"
+    STAGE_HIGHLIGHT = "highlight"
+
     def __init__(
         self,
         log_event: LogEvent,
@@ -177,14 +181,14 @@ class LogData:
 
         self.search_matches: int = 0
 
-        self._render_stages = {"newline": None, "search_text": None}
+        self._render_stages: dict[str, Text] = {}
         self._lines: list[Strip] = []
         self._max_width: int = 0
 
-        self._current_state: StateCache = self.get_current_state()
+        self._state: StateCache = self._current_state()
         super().__init__()
 
-    def get_current_state(self) -> StateCache:
+    def _current_state(self) -> StateCache:
         return StateCache(self.expanded, self.search_text, self.highlight)
 
     def update(self) -> bool:
@@ -193,19 +197,19 @@ class LogData:
         Returns:
             A boolean indicating whether the line_count has changed.
         """
-        new_state = self.get_current_state()
-        if self.line_count == 0 or new_state.expanded != self._current_state.expanded:
-            stage = "full"
-        elif new_state.search_text != self._current_state.search_text:
-            stage = "search"
-        elif new_state.highlight != self._current_state.highlight:
-            stage = "highlight"
+        new_state = self._current_state()
+        if self.line_count == 0 or new_state.expanded != self._state.expanded:
+            stage = self.STAGE_FULL
+        elif new_state.search_text != self._state.search_text:
+            stage = self.STAGE_SEARCH
+        elif new_state.highlight != self._state.highlight:
+            stage = self.STAGE_HIGHLIGHT
         else:
             # nothing to update and no re-indexing necessary
             return False
 
         old_line_length = self.line_count
-        if stage == "full":
+        if stage == self.STAGE_FULL:
             log("doing a full log update")
             new_line = self.log_event.parsed.copy()
             if self.expanded:
@@ -219,35 +223,34 @@ class LogData:
 
             lines = new_line.split()
             self._max_width = max((line.cell_len for line in lines))
-            self._render_stages["newline"] = new_line
+            self._render_stages[self.STAGE_FULL] = new_line
 
-        if stage in ["full", "search"]:
+        if stage in [self.STAGE_FULL, self.STAGE_SEARCH]:
             log("doing a search update")
-            _line = self._render_stages["newline"].copy()
+            _line = self._render_stages[self.STAGE_FULL].copy()
 
             if self.search_text:
                 self.search_matches = _line.highlight_regex(
                     self.search_text, "black on yellow"
                 )
-            self._render_stages["search_text"] = _line
+            self._render_stages[self.STAGE_SEARCH] = _line
 
-        if stage in ["full", "search", "highlight"]:
+        if stage in [self.STAGE_FULL, self.STAGE_SEARCH, self.STAGE_HIGHLIGHT]:
             log("doing a highlight update")
-            _line = self._render_stages["search_text"].copy()
+            _line = self._render_stages[self.STAGE_SEARCH].copy()
             if self.highlight:
                 _line.stylize(self._rich_style.background_style)
 
-            self._render_stages["highlight"] = _line
+            self._render_stages[self.STAGE_HIGHLIGHT] = _line
 
         segments = self._console.render_lines(
-            self._render_stages["highlight"],
+            self._render_stages[self.STAGE_HIGHLIGHT],
             options=self._render_settings.update_width(self._max_width),
         )
 
-        # this should be cached too.
         self._lines = [Strip(segment, self._max_width) for segment in segments]
 
-        self._current_state = self.get_current_state()
+        self._state = self._current_state()
         return old_line_length != self.line_count
 
     @property
@@ -323,6 +326,7 @@ class LineCache:
             self._re_index_from(log_data_idx)
         else:
             # just update the loglines corresponding to this log_data item
+            # no reindexing required
             start_idx = log_data.line_index
             for idx, line in enumerate(log_data.lines):
                 self._log_lines[start_idx + idx] = line
@@ -434,7 +438,7 @@ class LogOutput(ScrollView, can_focus=True):
             scroll_to = view_y_top + delta_y
             return scroll_to
 
-    def _scroll_cursor_into_view(self, animate: bool = False) -> None:
+    def _scroll_cursor_into_view(self) -> None:
         """When the cursor is at a boundary of the LogOutput and moves out
         of view, this method handles scrolling to ensure it remains visible."""
         log_data = self._line_cache[self.current_row]
@@ -454,7 +458,8 @@ class LogOutput(ScrollView, can_focus=True):
             self.scroll_to(None, scroll_value, animate=False)
 
     def watch_current_row(self, old_row: int, new_row: int) -> None:
-
+        if new_row == -1:
+            return
         if old_row > -1:
             self._line_cache[old_row].highlight = False
             self._line_cache.update_log_data(old_row)
@@ -465,6 +470,7 @@ class LogOutput(ScrollView, can_focus=True):
 
     def action_cursor_down(self) -> None:
         if self.current_row == self._line_cache.log_data_count - 1:
+            # at the bottom of the list. do nothing
             return
         if self.current_row == -1:
             self.current_row = 0
@@ -473,6 +479,7 @@ class LogOutput(ScrollView, can_focus=True):
 
     def action_cursor_up(self) -> None:
         if self.current_row <= 0:
+
             return
         self.current_row -= 1
 
@@ -505,6 +512,7 @@ class LogOutput(ScrollView, can_focus=True):
 
     def clear_log(self) -> None:
         self._line_cache = LineCache(self._console, self._rich_style)
+        self.current_row = -1
         self.refresh()
 
     async def _watch_log(self) -> None:
@@ -524,7 +532,7 @@ class LogOutput(ScrollView, can_focus=True):
                 if not len(log_items) >= max_item_length:
                     await asyncio.sleep(delay)
                 is_sending = True
-                await self.add_item(log_items)
+                await self.add_log_event(log_items)
 
                 is_sending = False
                 log_items = []
