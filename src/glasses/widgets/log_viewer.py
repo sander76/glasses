@@ -554,8 +554,10 @@ class LogOutput(ScrollView, can_focus=True):
             return
         log_data = self._line_cache[self.current_row]
         log_data.expanded = not log_data.expanded
-        self._line_cache.update_log_data(self.current_row)
-        self.refresh()
+        # virtual size has changed.
+        self.virtual_size = self._line_cache.update_log_data(self.current_row)
+
+        self.refresh(layout=True)
 
     def highlight(self, search_text: str) -> None:
         self._line_cache.highligh_search_text(search_text)

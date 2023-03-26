@@ -26,7 +26,7 @@ class LogEvent:
 class LogReader(ReactrModel):
     namespace: Reactr[str] = Reactr("no namespace")
     pod = Reactr("no pod")
-    tail = Reactr[int](50)
+    tail = Reactr[int](500)
     highlight_text = Reactr[str]("")
 
     is_reading = Reactr(False)
