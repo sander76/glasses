@@ -297,9 +297,6 @@ class LineCache:
     def log_data(self) -> list[LogData]:
         return self._log_data
 
-    def __getitem__(self, key: int) -> LogData:
-        return self._log_data[key]
-
     @property
     def line_count(self) -> int:
         """Return the amount of lines/Strips"""
@@ -308,6 +305,9 @@ class LineCache:
     @property
     def log_data_count(self) -> int:
         return len(self._log_data)
+
+    def __getitem__(self, key: int) -> LogData:
+        return self._log_data[key]
 
     def line(self, line_idx: int) -> Strip:
         return self._log_lines[line_idx]
