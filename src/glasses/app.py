@@ -18,11 +18,8 @@ from glasses.widgets.log_viewer import LogViewer
 from glasses.widgets.modal import HelpView
 from glasses.widgets.nested_list_view import NestedListView
 
-ID_BTN_REFRESH = "refresh"
-
 Provider = TypeVar("Provider", NameSpace, Cluster)
 
-# TODO: change background color of selected logitem
 # TODO: Logviewer: Add checkbox to enable/disable autoscroll.
 # TODO: When starting new logger, ask whether to stop the previous one first.
 # TODO: Remove first layer from app as it is not needed anymore. (modal screens are displayed in another, more direct way.)
