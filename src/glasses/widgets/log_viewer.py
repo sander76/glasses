@@ -97,7 +97,9 @@ class LogControl(Widget):
     LogControl Button:focus {
         color: $secondary;
     }
-
+    LogControl Horizontal {
+        height:auto;
+    }
     """
 
     def __init__(self, reader: LogReader) -> None:
