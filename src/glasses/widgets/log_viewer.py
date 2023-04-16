@@ -357,7 +357,7 @@ class LogOutput(ScrollView, can_focus=True):
 
     DEFAULT_CSS = """
     LogOutput .logoutput--highlight {
-        background: $secondary 20%;
+        background: $secondary 10%;
     }
     """
     current_row: Reactive[int] = Reactive(-1)
@@ -369,7 +369,6 @@ class LogOutput(ScrollView, can_focus=True):
         self._highlight_text: str = ""
 
     def on_mount(self) -> None:
-        self._rich_style = self.get_component_rich_style("logoutput--highlight")
         self._line_cache = LineCache(self.app.console)
         asyncio.create_task(self._watch_log())
         super().on_mount()
@@ -460,9 +459,9 @@ class LogOutput(ScrollView, can_focus=True):
 
         if log_line_idx >= self._line_cache.line_count:
             return Strip.blank(width)
-
+        rich_style = self.get_component_rich_style("logoutput--highlight")
         return (
-            self._line_cache.line(log_line_idx, self._highlight_text, self._rich_style)
+            self._line_cache.line(log_line_idx, self._highlight_text, rich_style)
         ).crop(scroll_x, scroll_x + width)
 
     async def add_log_event(self, log_events: list[LogEvent]) -> None:
