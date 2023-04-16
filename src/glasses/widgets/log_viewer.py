@@ -5,8 +5,8 @@ from typing import NamedTuple
 from rich.console import Console, ConsoleOptions
 from rich.json import JSON
 from rich.style import Style
-from rich.text import Text
-from textual import events, log
+from rich.text import Lines
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
@@ -149,141 +149,123 @@ class LogControl(Widget):
 
 
 class StateCache(NamedTuple):
+    line_length: int
+    selected: bool
     expanded: bool
     search_text: str
-    highlight: bool
 
 
 class LogData:
-    STAGE_FULL = "full"
-    STAGE_SEARCH = "search"
-    STAGE_HIGHLIGHT = "highlight"
-
     def __init__(
         self,
         log_event: LogEvent,
         console: Console,
         render_settings: ConsoleOptions,
-        highligh_style: Style,
     ) -> None:
         self._console = console
         self._render_settings = render_settings
 
         self.log_event = log_event
-        self._rich_style = highligh_style
 
         # start index of lines collection where this piece of logdata starts.
         self.line_index: int = -1
 
-        self.expanded = False
-        self.search_text: str = ""
-        self.highlight: bool = False
+        # raw lines without any styling like sected, search.
+        self._raw_lines: Lines
 
-        self.search_matches: int = 0
-
-        self._render_stages: dict[str, Text] = {}
         self._lines: list[Strip] = []
-        self._max_width: int = 0
+        self._max_width: int = -1
 
-        self._state: StateCache = self._current_state()
-        super().__init__()
+        self.selected: bool = False
+        self.expanded: bool = False
 
-    def _current_state(self) -> StateCache:
-        return StateCache(self.expanded, self.search_text, self.highlight)
+        self._state: StateCache = StateCache(
+            line_length=-1, selected=False, search_text="", expanded=self.expanded
+        )
+        self.line_count = 0
+        self._render_plain()
 
-    def update(self) -> bool:
-        """Update the output of the logdata
+    def toggle_expand(self) -> None:
+        self.expanded = not self.expanded
+        self._render_plain()
 
-        Returns:
-            A boolean indicating whether the line_count has changed.
-        """
-        new_state = self._current_state()
-        if self.line_count == 0 or new_state.expanded != self._state.expanded:
-            stage = self.STAGE_FULL
-        elif new_state.search_text != self._state.search_text:
-            stage = self.STAGE_SEARCH
-        elif new_state.highlight != self._state.highlight:
-            stage = self.STAGE_HIGHLIGHT
-        else:
-            # nothing to update and no re-indexing necessary
-            return False
+    def _render_plain(self) -> None:
+        self._max_width = 0
+        new_line = self.log_event.parsed.copy()
+        if self.expanded:
 
-        old_line_length = self.line_count
-        if stage == self.STAGE_FULL:
-            log("doing a full log update")
-            new_line = self.log_event.parsed.copy()
-            if self.expanded:
+            new_line.append("\n")
+            raw = self.log_event.raw
+            if isinstance(raw, JSON):
+                raw = raw.text
+            new_line.append(raw)
+            new_line.append("\n")
 
-                new_line.append("\n")
-                raw = self.log_event.raw
-                if isinstance(raw, JSON):
-                    raw = raw.text
-                new_line.append(raw)
-                new_line.append("\n")
+        self._raw_lines = new_line.split(allow_blank=True)
+        self._max_width = max((len(line.plain) for line in self._raw_lines))
+        self.line_count = len(self._raw_lines)
 
-            lines = new_line.split()
-            self._max_width = max((line.cell_len for line in lines))
-            self._render_stages[self.STAGE_FULL] = new_line
+    def _render(
+        self,
+        search_text: str,
+        line_length: int,
+        selected_style: Style,
+    ) -> list[Strip]:
+        for raw_line in self._raw_lines:
+            styled_line = raw_line.copy()
 
-        if stage in [self.STAGE_FULL, self.STAGE_SEARCH]:
-            log("doing a search update")
-            _line = self._render_stages[self.STAGE_FULL].copy()
+            if search_text:
+                styled_line.highlight_words([search_text], "black on yellow")
 
-            if self.search_text:
-                self.search_matches = _line.highlight_regex(
-                    self.search_text, "black on yellow"
-                )
-            self._render_stages[self.STAGE_SEARCH] = _line
+            styled_line.align("left", line_length)
 
-        if stage in [self.STAGE_FULL, self.STAGE_SEARCH, self.STAGE_HIGHLIGHT]:
-            log("doing a highlight update")
-            _line = self._render_stages[self.STAGE_SEARCH].copy()
-            if self.highlight:
-                _line.stylize(self._rich_style.background_style)
+            if self.selected:
+                styled_line.stylize(selected_style)
+            yield Strip(self._console.render(styled_line), line_length)
 
-            self._render_stages[self.STAGE_HIGHLIGHT] = _line
-
-        segments = self._console.render_lines(
-            self._render_stages[self.STAGE_HIGHLIGHT],
-            options=self._render_settings.update_width(self._max_width),
+    def update(
+        self,
+        selected_style: Style,
+        search_text: str,
+        line_length: int,
+    ) -> None:
+        """Update the output of the logdata"""
+        new_state = StateCache(
+            line_length=line_length,
+            selected=self.selected,
+            search_text=search_text,
+            expanded=self.expanded,
         )
 
-        self._lines = [Strip(segment, self._max_width) for segment in segments]
+        if len(self._lines) > 0 and self._state == new_state:
+            return
 
-        self._state = self._current_state()
-        return old_line_length != self.line_count
+        self._lines = list(self._render(search_text, line_length, selected_style))
+        self._state = new_state
 
-    @property
-    def lines(self) -> list[Strip]:
-        self.update()
-        return self._lines
 
-    @property
-    def line_count(self) -> int:
-        return len(self._lines)
-
-    @property
-    def max_width(self) -> int:
-        return self._max_width
+LogDataLineIndex = int
+LogDataIndex = int
 
 
 class LineCache:
-    def __init__(self, console: Console, highlight_style: Style) -> None:
-        self._log_data: list[LogData] = []
-        self._log_lines: list[Strip] = []
+    def __init__(self, console: Console) -> None:
 
-        # A list which is kept in sync with the above _log_lines list.
-        # The list indices correspond to the log_lines. The value
-        # corresponds to the index of the log_data list
+        self._log_data: list[LogData] = []
+
+        # A list which keeps track of a single UI-line and the  corresponsing log line
+        #
+        # The list index corresponds to the UI lines. The value
+        # corresponds to the Logdata and LogData-index
 
         # idx   value
-        # 0     1  -> logline 0 corresponds with log_data 1
-        # 1     1  -> logline 1 corresponds with log_data 1
-        # 2     2  -> logline 2 corresponds with log_data 2
+        # 0     LogData_1, 0  -> logline 0 corresponds with index 0 of LogData_1
+        # 1     LogData_2, 0  -> logline 1 corresponds with index 0  LogData_2
+        # 2     LogData_2, 1  -> logline 2 corresponds with index 1  LogData_2
         #
         # Using the above example it is easy to get the logdata
         # based on the provided log_line_index.
-        self._log_lines_idx__log_data_idx: list[int] = []
+        self._log_lines_idx__log_data_idx: list[tuple[LogData, int, LogDataIndex]] = []
 
         self._max_width: int = 0
         self._console = console
@@ -291,7 +273,9 @@ class LineCache:
             overflow="ignore", no_wrap=True
         )
 
-        self._highlight_style = highlight_style
+    def log_data_index_from_line_index(self, line_idx: int) -> int:
+        _, _, log_data_index = self._log_lines_idx__log_data_idx[line_idx]
+        return log_data_index
 
     @property
     def log_data(self) -> list[LogData]:
@@ -300,92 +284,64 @@ class LineCache:
     @property
     def line_count(self) -> int:
         """Return the amount of lines/Strips"""
-        return len(self._log_lines)
+
+        return len(self._log_lines_idx__log_data_idx)
 
     @property
     def log_data_count(self) -> int:
         return len(self._log_data)
 
-    def __getitem__(self, key: int) -> LogData:
-        return self._log_data[key]
-
-    def line(self, line_idx: int) -> Strip:
-        return self._log_lines[line_idx]
-
-    def log_data_index_from_line_index(self, log_line_index: int) -> int:
-        """Return the index of the logdata list based on a provided line_index."""
-
-        log_data_index = self._log_lines_idx__log_data_idx[log_line_index]
-        return log_data_index
-
-    def update_log_data(self, log_data_idx: int) -> Size:
-        log_data = self._log_data[log_data_idx]
-
-        needs_re_indexing = log_data.update()
-        if needs_re_indexing:
-            self._re_index_from(log_data_idx)
-        else:
-            # just update the loglines corresponding to this log_data item
-            # no reindexing required
-            start_idx = log_data.line_index
-            for idx, line in enumerate(log_data.lines):
-                self._log_lines[start_idx + idx] = line
-        return Size(self._max_width, len(self._log_lines))
-
-    def highligh_search_text(self, text: str) -> int:
-        for idx, log_data in enumerate(self.log_data):
-            log_data.search_text = text
-            self.update_log_data(idx)
-
-    def _re_index_from(self, log_data_idx: int) -> None:
-        """Reindex the log lines.
-
-        A logdata has changed its line-count. As a result all following logdata items and lines
-        are not valid anymore."""
-        log_data = self._log_data[log_data_idx]
-        valid_log_lines = self._log_lines[: log_data.line_index]
-        valid_log_lines_idx__log_data_idx = self._log_lines_idx__log_data_idx[
-            : log_data.line_index
-        ]
-
-        for idx, log_data in enumerate(self._log_data[log_data_idx:]):
-            log_data.line_index = len(valid_log_lines)
-            valid_log_lines.extend(log_data._lines)
-
-            valid_log_lines_idx__log_data_idx.extend(
-                log_data.line_count * [idx + log_data_idx]
-            )
-
-        self._log_lines = valid_log_lines
-        self._log_lines_idx__log_data_idx = valid_log_lines_idx__log_data_idx
-
-    async def add_log_events(self, log_events: list[LogEvent]) -> Size:
-
-        return self._update_lines(
-            [
-                LogData(
-                    event,
-                    self._console,
-                    render_settings=self._render_options,
-                    highligh_style=self._highlight_style,
-                )
-                for event in log_events
-            ]
+    def line(
+        self,
+        line_idx: int,
+        search_text: str,
+        selected_style: Style,
+    ) -> Strip:
+        log_data, log_data_line_idx, _ = self._log_lines_idx__log_data_idx[line_idx]
+        log_data.update(
+            selected_style=selected_style,
+            search_text=search_text,
+            line_length=self._max_width,
         )
 
-    def _update_lines(self, log_datas: list[LogData]) -> Size:
-        last_log_data_index = self.log_data_count
-        for idx, log_data in enumerate(log_datas):
-            log_data.line_index = len(self._log_lines)
+        return log_data._lines[log_data_line_idx]
 
-            self._log_lines.extend(log_data.lines)
+    def toggle_expand(self, log_data_idx: int) -> None:
+        log_data = self._log_data[log_data_idx]
+        log_data.toggle_expand()
+        self._reconstruct_index()
+
+    def _reconstruct_index(self) -> None:
+        self._max_width = 0
+        self._log_lines_idx__log_data_idx = []
+        for idx, log_data in enumerate(self.log_data):
+            log_data.line_index = len(self._log_lines_idx__log_data_idx)
             self._log_lines_idx__log_data_idx.extend(
-                log_data.line_count * [last_log_data_index + idx]
+                self._lines_construct_from_log_data(log_data, idx)
             )
-            self._log_data.append(log_data)
+            self._max_width = max(self._max_width, log_data._max_width)
 
-            self._max_width = max(self._max_width, log_data.max_width)
-        return Size(self._max_width, len(self._log_lines))
+    async def add_log_events(self, log_events: list[LogEvent]) -> Size:
+        for log_event in log_events:
+            log_data = LogData(
+                log_event, self._console, render_settings=self._render_options
+            )
+            log_data.line_index = len(self._log_lines_idx__log_data_idx)
+            self._log_lines_idx__log_data_idx.extend(
+                self._lines_construct_from_log_data(log_data, len(self._log_data))
+            )
+
+            self._log_data.append(log_data)
+            self._max_width = max(self._max_width, log_data._max_width)
+        return Size(self._max_width, len(self._log_lines_idx__log_data_idx))
+
+    def _lines_construct_from_log_data(
+        self, log_data: LogData, log_data_index: int
+    ) -> list[tuple[LogData, int, LogDataIndex]]:
+        new_list: list[tuple[LogData, int, LogDataIndex]] = []
+        for idx in range(log_data.line_count):
+            new_list.append((log_data, idx, log_data_index))
+        return new_list
 
 
 class LogOutput(ScrollView, can_focus=True):
@@ -408,10 +364,11 @@ class LogOutput(ScrollView, can_focus=True):
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self._reader = reader
+        self._highlight_text: str = ""
 
     def on_mount(self) -> None:
         self._rich_style = self.get_component_rich_style("logoutput--highlight")
-        self._line_cache = LineCache(self.app.console, self._rich_style)
+        self._line_cache = LineCache(self.app.console)
         asyncio.create_task(self._watch_log())
         super().on_mount()
 
@@ -441,7 +398,7 @@ class LogOutput(ScrollView, can_focus=True):
     def _scroll_cursor_into_view(self) -> None:
         """When the cursor is at a boundary of the LogOutput and moves out
         of view, this method handles scrolling to ensure it remains visible."""
-        log_data = self._line_cache[self.current_row]
+        log_data = self._line_cache.log_data[self.current_row]
 
         view_y_top = self.scroll_offset.y
         view_y_bottom = (
@@ -461,11 +418,10 @@ class LogOutput(ScrollView, can_focus=True):
         if new_row == -1:
             return
         if old_row > -1:
-            self._line_cache[old_row].highlight = False
-            self._line_cache.update_log_data(old_row)
+            self._line_cache.log_data[old_row].selected = False
 
-        self._line_cache[new_row].highlight = True
-        self._line_cache.update_log_data(new_row)
+        self._line_cache.log_data[new_row].selected = True
+
         self._scroll_cursor_into_view()
 
     def action_cursor_down(self) -> None:
@@ -498,12 +454,14 @@ class LogOutput(ScrollView, can_focus=True):
         strip = self._render_line(scroll_y + y, scroll_x, self.size.width)
         return strip
 
-    def _render_line(self, y: int, scroll_x: int, width: int) -> Strip:
-        if y >= self._line_cache.line_count:
+    def _render_line(self, log_line_idx: int, scroll_x: int, width: int) -> Strip:
+
+        if log_line_idx >= self._line_cache.line_count:
             return Strip.blank(width)
 
-        line = self._line_cache.line(y)
-        return line.crop(scroll_x, scroll_x + width)
+        return (
+            self._line_cache.line(log_line_idx, self._highlight_text, self._rich_style)
+        ).crop(scroll_x, scroll_x + width)
 
     async def add_log_event(self, log_events: list[LogEvent]) -> None:
         size = await self._line_cache.add_log_events(log_events)
@@ -511,7 +469,7 @@ class LogOutput(ScrollView, can_focus=True):
         self.virtual_size = size
 
     def clear_log(self) -> None:
-        self._line_cache = LineCache(self._console, self._rich_style)
+        self._line_cache = LineCache(self._console)
         self.current_row = -1
         self.refresh()
 
@@ -552,15 +510,18 @@ class LogOutput(ScrollView, can_focus=True):
     def action_expand(self) -> None:
         if self.current_row < 0:
             return
-        log_data = self._line_cache[self.current_row]
-        log_data.expanded = not log_data.expanded
-        # virtual size has changed.
-        self.virtual_size = self._line_cache.update_log_data(self.current_row)
+        self._line_cache.toggle_expand(self.current_row)
 
-        self.refresh(layout=True)
+        # virtual size has changed.
+        self.virtual_size = Size(
+            self._line_cache._max_width, self._line_cache.line_count
+        )
+
+        # self.refresh()
 
     def highlight(self, search_text: str) -> None:
-        self._line_cache.highligh_search_text(search_text)
+        self._highlight_text = search_text
+        # self._line_cache.highligh_search_text(search_text)
         self.refresh()
 
 

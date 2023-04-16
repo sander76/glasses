@@ -7,7 +7,7 @@ from rich.text import Text
 from textual.strip import Strip
 
 from glasses.controllers.log_provider import LogEvent
-from glasses.widgets.log_viewer import LineCache, LogData, LogOutput
+from glasses.widgets.log_viewer import LineCache, LogOutput
 
 
 @pytest.fixture()
@@ -19,7 +19,7 @@ def console() -> Console:
 async def test_log_event__add_item__populated(console):
     log_event = LogEvent("Raw text", Text("Raw text"))
 
-    line_cache = LineCache(console, Style())
+    line_cache = LineCache(console)
     await line_cache.add_log_events([log_event])
 
     assert line_cache.log_data_count == 1
@@ -31,85 +31,145 @@ async def test_log_event__add_item__populated(console):
 async def test_log_events__add_item__populated(console):
     log_events = [LogEvent(txt, Text(txt)) for txt in ("First line", "Second line")]
 
-    line_cache = LineCache(console, Style())
+    line_cache = LineCache(console)
 
     await line_cache.add_log_events(log_events)
 
     assert line_cache.log_data_count == 2
     assert line_cache.line_count == 2
-
-    assert line_cache[0].line_index == 0
-    assert line_cache[1].line_index == 1
+    assert line_cache._max_width == 11
 
 
-@pytest.mark.asyncio()
-async def test_multiline_log_events__add_item__populated(console):
-    log_events = [
-        LogEvent(text, Text(text)) for text in ("Two\nLines", "Three\nlines\npart")
-    ]
+# def test_plain_line__render__correct_output():
+#     log_data = LogData(LogEvent("First line", parsed=Text("First line")))
+#     assert False
 
-    line_cache = LineCache(console, Style())
+
+# def test_selected__render__correct_output():
+#     assert False
+
+# def test_search__render__correct_output():
+#     assert False
+
+# def test_expanded__render__correct_output():
+#     assert False
+
+# def test_expanded_selected_search__render__correct_output():
+#     assert False
+
+
+# def test_call_update_twice__render_only_called_once():
+#     assert False
+
+# def test_expand_logdata__all_lines__correct_output():
+#     """Three log data items.
+
+#     The middle one is expanded. check output
+#     The middle one is nox expanded. check output
+#     """
+#     assert False
+
+
+@pytest.mark.asyncio
+async def test_single_log_event__get_lines__returns_rendered_line(console):
+    log_events = [LogEvent("First line", Text("First line"))]
+
+    line_cache = LineCache(console)
 
     await line_cache.add_log_events(log_events)
 
-    assert line_cache.log_data_count == 2
-    assert len(line_cache._log_lines) == 5
+    line_1 = line_cache.line(0, "", Style(bgcolor="blue"))
 
-    assert line_cache[0].line_index == 0
-    assert line_cache[1].line_index == 2
+    assert line_1 == Strip([Segment("First line"), Segment("\n")], 10)
 
 
-def test_log_event__log_data_highlight__is_correct(console):
-    log_event = LogEvent("Two\nLines", Text("Two\nLines"))
+@pytest.mark.asyncio()
+async def test_multiline_log_events__get_lines__correct_result(console):
+    log_events = [LogEvent("Two\nLines", Text("Two\nLines"))]
+    irrelevant_style = Style(bgcolor="blue")
+    line_cache = LineCache(console)
 
-    log_data = LogData(
-        log_event,
-        console,
-        console.options.update(overflow="ignore", no_wrap=True),
-        Style(bgcolor="blue"),
+    await line_cache.add_log_events(log_events)
+
+    line_0 = line_cache.line(0, "", irrelevant_style)
+    line_1 = line_cache.line(1, "", irrelevant_style)
+
+    assert len(line_cache._log_lines_idx__log_data_idx) == 2
+    assert line_0 == Strip([Segment("Two  "), Segment("\n")], 5)
+    assert line_1 == Strip([Segment("Lines"), Segment("\n")], 5)
+
+
+@pytest.mark.asyncio
+async def test_single_log_event__expand_and_unexpand__correct_result(console):
+    """expand a log event, check result, unexpand log event, check result"""
+    log_events = [
+        LogEvent("Raw First line", Text("First line")),
+        # LogEvent("Raw second line", Text("Second line")),
+    ]
+    irrelevant_style = Style(bgcolor="blue")
+    line_cache = LineCache(console)
+
+    await line_cache.add_log_events(log_events)
+
+    lines = [
+        line_cache.line(idx, "", irrelevant_style)
+        for idx in range(line_cache.line_count)
+    ]
+
+    line_cache.toggle_expand(0)
+
+    lines = [
+        line_cache.line(idx, "", irrelevant_style)
+        for idx in range(line_cache.line_count)
+    ]
+    assert lines == [
+        Strip([Segment("First line    "), Segment("\n")], 14),
+        Strip([Segment("Raw First line"), Segment("\n")], 14),
+        Strip([Segment("              "), Segment("\n")], 14),
+    ]
+
+    line_cache.toggle_expand(0)
+    lines = [
+        line_cache.line(idx, "", irrelevant_style)
+        for idx in range(line_cache.line_count)
+    ]
+    assert lines == [
+        Strip([Segment("First line"), Segment("\n")], 10),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_single_log_event__select_and_unselect__correct_result(console):
+    """Select a log event, check result, unselect a log event check result."""
+    log_events = [LogEvent("First line", Text("First line"))]
+    selected_style = Style(bgcolor=Color("blue", ColorType.STANDARD, number=4))
+    line_cache = LineCache(console)
+
+    await line_cache.add_log_events(log_events)
+
+    line_1 = line_cache.line(
+        0,
+        "",
+        selected_style,  # use this style to highlight te selection.
+        selected=True,  # mark it selected
+        console_width=20,
+        expanded=False,
     )
 
-    # first a full run
-    result = log_data.lines
-    assert result == [
-        Strip([Segment("Two"), Segment("  ")], 5),
-        Strip([Segment("Lines")], 5),
-    ]
-    cached_full_stage = log_data._render_stages["newline"]
-
-    # second a highlight run
-    log_data.highlight = True
-    result = log_data.lines
-    assert result == [
-        Strip(
-            [
-                Segment(
-                    "Two", Style(bgcolor=Color("blue", ColorType.STANDARD, number=4))
-                ),
-                Segment("  "),
-            ],
-            5,
-        ),
-        Strip(
-            [
-                Segment(
-                    "Lines", Style(bgcolor=Color("blue", ColorType.STANDARD, number=4))
-                )
-            ],
-            5,
-        ),
-    ]
-    assert log_data._render_stages["newline"] is cached_full_stage
-
-    log_data.highlight = False
-    result = log_data.lines
-    assert result == [
-        Strip([Segment("Two"), Segment("  ")], 5),
-        Strip([Segment("Lines")], 5),
-    ]
-
-
-# def test_log_event__update_log_data__
+    assert line_1 == Strip(
+        [Segment("First line          ", selected_style), Segment("\n")], 20
+    )
+    line_1 = line_cache.line(
+        0,
+        "",
+        selected_style,  # use this style to highlight te selection.
+        selected=False,  # mark it selected
+        console_width=20,
+        expanded=False,
+    )
+    assert line_1 == Strip(
+        [Segment("First line          "), Segment("\n")], 20
+    ), "there should be no styling applied to the test as this would indicate the item is still selected."
 
 
 def test_scroll_data_below_view_window():
@@ -165,43 +225,3 @@ def test_scroll_data_above_view_window():
     value = LogOutput.new_scroll(**input)
 
     assert value == expected_new_view_y_top
-
-
-@pytest.mark.asyncio()
-async def test_log_event_expand__lines__success(console):
-    log_event1 = LogEvent("Log event 1", Text("Log event 1"))
-    log_event2 = LogEvent("Log event 2", Text("Log event 2"))
-
-    line_cache = LineCache(console, Style())
-    await line_cache.add_log_events([log_event1, log_event2])
-
-    assert line_cache.line_count == 2
-    assert line_cache.line_count == len(line_cache._log_lines_idx__log_data_idx)
-    assert line_cache.log_data_index_from_line_index(0) == 0
-    assert line_cache.log_data_index_from_line_index(1) == 1
-
-    first_log_data = line_cache[0]
-    first_log_data.expanded = True
-
-    line_cache.update_log_data(0)
-
-    assert line_cache.line_count == 4  # Expanded logevent has an empty line added.
-    assert len(line_cache._log_lines_idx__log_data_idx) == 4
-    assert line_cache.log_data_index_from_line_index(0) == 0
-    assert line_cache.log_data_index_from_line_index(1) == 0
-    assert line_cache.log_data_index_from_line_index(2) == 0
-    assert line_cache.log_data_index_from_line_index(3) == 1
-
-
-@pytest.mark.asyncio
-async def test_log_event_search_test__lines__are_updated(console):
-    log_event1 = LogEvent("Log event 1", Text("Log event 1"))
-    log_event2 = LogEvent("Log event 2", Text("Log event 2"))
-
-    line_cache = LineCache(console, Style())
-    await line_cache.add_log_events([log_event1, log_event2])
-
-    line_cache.highligh_search_text("event 1")
-
-    first_log_line = line_cache.line(0)
-    print(first_log_line)
