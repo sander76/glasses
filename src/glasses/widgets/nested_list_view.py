@@ -70,6 +70,9 @@ class UpdateableListView(Widget):
         layout: vertical;
         overflow-y: auto;
     }
+    ListView {
+        height: auto;
+    }
     """
 
     def __init__(self, item: BaseK8, id: str) -> None:
