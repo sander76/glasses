@@ -4,7 +4,6 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
-from rich import print
 from rich.text import Text
 
 # default UTC time based ecs timestamp.
@@ -98,12 +97,3 @@ def _parse(_js: dict[Any, Any]) -> Text:
     return Text(" ").join(
         itertools.chain(first_items, parsed_items.values(), last_items)
     )
-
-
-if __name__ == "__main__":
-    from glasses.controllers import log_provider
-
-    log_data = log_provider.DummyLogReader.log_data()
-    for line in range(5):
-        log_line = next(log_data)
-        print(jsonparse(log_line))

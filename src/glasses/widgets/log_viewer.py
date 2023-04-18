@@ -1,8 +1,8 @@
 import asyncio
 from enum import Enum, auto
-from typing import NamedTuple
+from typing import Iterator, NamedTuple
 
-from rich.console import Console, ConsoleOptions
+from rich.console import Console
 from rich.json import JSON
 from rich.style import Style
 from rich.text import Lines
@@ -162,19 +162,18 @@ class LogData:
         self,
         log_event: LogEvent,
         console: Console,
-        render_settings: ConsoleOptions,
     ) -> None:
         self._console = console
-        self._render_settings = render_settings
 
         self.log_event = log_event
 
         # start index of lines collection where this piece of logdata starts.
         self.line_index: int = -1
 
-        # raw lines without any styling like sected, search.
+        # raw lines without any styling like selected, search highlight.
         self._raw_lines: Lines
 
+        # styled lines including ui styling like selected, search highlight.
         self._lines: list[Strip] = []
         self._max_width: int = -1
 
@@ -212,7 +211,7 @@ class LogData:
         search_text: str,
         line_length: int,
         selected_style: Style,
-    ) -> list[Strip]:
+    ) -> Iterator[Strip]:
         for raw_line in self._raw_lines:
             styled_line = raw_line.copy()
 
@@ -261,9 +260,9 @@ class LineCache:
         # corresponds to the Logdata and LogData-index
 
         # idx   value
-        # 0     LogData_1, 0  -> logline 0 corresponds with index 0 of LogData_1
-        # 1     LogData_2, 0  -> logline 1 corresponds with index 0  LogData_2
-        # 2     LogData_2, 1  -> logline 2 corresponds with index 1  LogData_2
+        # 0     LogData_1, 0, 0  -> logline 0 corresponds with line_index 0 of LogData_1. LogData_1 is index 0 of log-lines_list
+        # 1     LogData_2, 0, 1  -> logline 1 corresponds with line_index 0 of LogData_2. LogData_2 is index 1 of log_lines_list
+        # 2     LogData_2, 1, 1  -> logline 2 corresponds with line_index 1 of LogData_2. LogData_2 is index 1 of log_lines_list
         #
         # Using the above example it is easy to get the logdata
         # based on the provided log_line_index.
@@ -271,9 +270,6 @@ class LineCache:
 
         self._max_width: int = 0
         self._console = console
-        self._render_options: ConsoleOptions = console.options.update(
-            overflow="ignore", no_wrap=True
-        )
 
     def log_data_index_from_line_index(self, line_idx: int) -> int:
         _, _, log_data_index = self._log_lines_idx__log_data_idx[line_idx]
@@ -298,12 +294,13 @@ class LineCache:
         line_idx: int,
         search_text: str,
         selected_style: Style,
+        line_length: int,
     ) -> Strip:
         log_data, log_data_line_idx, _ = self._log_lines_idx__log_data_idx[line_idx]
         log_data.update(
             selected_style=selected_style,
             search_text=search_text,
-            line_length=self._max_width,
+            line_length=line_length,
         )
 
         return log_data._lines[log_data_line_idx]
@@ -325,9 +322,7 @@ class LineCache:
 
     async def add_log_events(self, log_events: list[LogEvent]) -> Size:
         for log_event in log_events:
-            log_data = LogData(
-                log_event, self._console, render_settings=self._render_options
-            )
+            log_data = LogData(log_event, self._console)
             log_data.line_index = len(self._log_lines_idx__log_data_idx)
             self._log_lines_idx__log_data_idx.extend(
                 self._lines_construct_from_log_data(log_data, len(self._log_data))
@@ -367,6 +362,7 @@ class LogOutput(ScrollView, can_focus=True):
         super().__init__()
         self._reader = reader
         self._highlight_text: str = ""
+        self._render_width: int = -1
 
     def on_mount(self) -> None:
         self._line_cache = LineCache(self.app.console)
@@ -395,6 +391,10 @@ class LogOutput(ScrollView, can_focus=True):
             delta_y = log_data_y_top - view_y_top
             scroll_to = view_y_top + delta_y
             return scroll_to
+
+    def on_resize(self) -> None:
+        self._render_width = max(self.size.width, self._line_cache._max_width)
+        self.refresh()
 
     def _scroll_cursor_into_view(self) -> None:
         """When the cursor is at a boundary of the LogOutput and moves out
@@ -460,8 +460,11 @@ class LogOutput(ScrollView, can_focus=True):
         if log_line_idx >= self._line_cache.line_count:
             return Strip.blank(width)
         rich_style = self.get_component_rich_style("logoutput--highlight")
+
         return (
-            self._line_cache.line(log_line_idx, self._highlight_text, rich_style)
+            self._line_cache.line(
+                log_line_idx, self._highlight_text, rich_style, self._render_width
+            )
         ).crop(scroll_x, scroll_x + width)
 
     async def add_log_event(self, log_events: list[LogEvent]) -> None:
