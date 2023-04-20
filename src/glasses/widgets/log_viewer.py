@@ -11,6 +11,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.geometry import Size
+from textual.message import Message
 from textual.reactive import Reactive, reactive
 from textual.scroll_view import ScrollView
 from textual.strip import Strip
@@ -79,7 +80,12 @@ class LogControl(Widget):
     .small_input:focus {
         border: none;
     }
-
+    .big_width {
+        width: 50;
+    }
+    .small_width {
+        width: 10;
+    }
 
     LogControl Button {
         width: auto;
@@ -115,18 +121,29 @@ class LogControl(Widget):
     def _update_pod(self, _: str) -> None:
         self.query_one("#pod_name", expect_type=Input).value = self._reader.pod
 
+    def update_search_result_count(self, result: dict[int, int]) -> None:
+        total_count = sum(
+            (search_result_count for search_result_count in result.values())
+        )
+        self.query_one("#search_results", expect_type=Label).update(str(total_count))
+
     def compose(self) -> ComposeResult:
         yield Horizontal(
             Label("namespace: "),
             Input(self._reader.namespace, id="namespace", classes="small_input"),
             Label("logtail"),
-            Input(str(self._reader.tail), id="tail", classes="small_input"),
+            Input(str(self._reader.tail), id="tail", classes="small_input small_width"),
         )
         yield Horizontal(
             Label("pod name: "),
             Input(self._reader.pod, id="pod_name", classes="small_input"),
             Label("search"),
-            Input(self._reader.highlight_text, id="search", classes="small_input"),
+            Input(
+                self._reader.highlight_text,
+                id="search",
+                classes="small_input small_width",
+            ),
+            Label("0", id="search_results"),
         )
         yield Horizontal(
             Button("log", id="startlog"),
@@ -170,7 +187,7 @@ class LogData:
         # start index of lines collection where this piece of logdata starts.
         self.line_index: int = -1
 
-        # raw lines without any styling like selected, search highlight.
+        # raw lines without ui styling like selected, search highlight.
         self._raw_lines: Lines
 
         # styled lines including ui styling like selected, search highlight.
@@ -189,6 +206,10 @@ class LogData:
     def toggle_expand(self) -> None:
         self.expanded = not self.expanded
         self._render_plain()
+
+    def search(self, search_string: str) -> int:
+        """Return the number of occurrences in the logentry."""
+        return self.log_event.parsed.plain.count(search_string)
 
     def _render_plain(self) -> None:
         self._max_width = 0
@@ -358,11 +379,19 @@ class LogOutput(ScrollView, can_focus=True):
     current_row: Reactive[int] = Reactive(-1)
     _line_cache: LineCache
 
+    class SearchResultCountChanged(Message):
+        """Search result count message changed."""
+
+        def __init__(self, count: dict[int, int]) -> None:
+            self.count = count
+            super().__init__()
+
     def __init__(self, reader: LogReader) -> None:
         super().__init__()
         self._reader = reader
         self._highlight_text: str = ""
         self._render_width: int = -1
+        self._search_text_task: asyncio.Task | None = None
 
     def on_mount(self) -> None:
         self._line_cache = LineCache(self.app.console)
@@ -521,12 +550,41 @@ class LogOutput(ScrollView, can_focus=True):
             self._line_cache._max_width, self._line_cache.line_count
         )
 
-        # self.refresh()
-
     def highlight(self, search_text: str) -> None:
         self._highlight_text = search_text
-        # self._line_cache.highligh_search_text(search_text)
+        self.search_log_items(search_text)
         self.refresh()
+
+    def search_log_items(self, search_text: str) -> None:
+        async def _search_task() -> dict[int, int]:
+            # mappable with the key as the log_item index, the amount of
+            # occurrences of the search_text.
+            if search_text == "":
+                return {}
+
+            search_items: dict[int, int] = {}
+
+            for idx, log_item in enumerate(self._line_cache.log_data):
+                count = log_item.search(search_text)
+                if count:
+                    search_items[idx] = count
+            return search_items
+
+        def count_finished(result: asyncio.Future) -> None:
+            try:
+                count = result.result()
+            except asyncio.CancelledError:
+                self.log("Task cancelled. doing nothing")
+                count = {}
+            self.post_message(self.SearchResultCountChanged(count))
+
+        # if search_text == "":
+        #     self.post_message(self.SearchResultCountChanged({}))
+        if self._search_text_task is not None:
+            self._search_text_task.cancel()
+
+        self._search_text_task = asyncio.create_task(_search_task())
+        self._search_text_task.add_done_callback(count_finished)
 
 
 class LogViewer(Static, can_focus=True):
@@ -588,3 +646,8 @@ class LogViewer(Static, can_focus=True):
 
     async def on_unmount(self) -> None:
         await self.reader.stop()
+
+    def on_log_output_search_result_count_changed(
+        self, event: LogOutput.SearchResultCountChanged
+    ):
+        self._log_control.update_search_result_count(event.count)

@@ -182,7 +182,7 @@ class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
         self.delay: float = 0.001
-        self.range: int = 100
+        self.range: int = 1
 
     def log_data(self) -> Iterator:
         with open(Path(__file__).parent / "log_data.txt") as fl:
