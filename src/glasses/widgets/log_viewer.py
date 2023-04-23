@@ -22,6 +22,10 @@ from glasses.controllers.log_provider import LogEvent, LogReader
 from glasses.namespace_provider import Pod
 from glasses.widgets.dialog import DialogResult, StopLoggingScreen, show_dialog
 
+LogDataLineIndex = int
+LogDataIndex = int
+OccurrenceCount = int
+
 
 class State(Enum):
     IDLE = auto()
@@ -74,19 +78,17 @@ class LogControl(Widget):
     .small_input {
         height: 1;
         border: none;
-        background: blue;
         width: 50;
     }
     .small_input:focus {
         border: none;
     }
-    .big_width {
-        width: 50;
+    #tail {
+        width:10;
     }
-    .small_width {
-        width: 10;
+    #search {
+        width: 20;
     }
-
     LogControl Button {
         width: auto;
         min-width: 20;
@@ -106,6 +108,9 @@ class LogControl(Widget):
     LogControl Horizontal {
         height:auto;
     }
+    Label {
+        min-width: 12
+    }
     """
 
     def __init__(self, reader: LogReader) -> None:
@@ -121,7 +126,9 @@ class LogControl(Widget):
     def _update_pod(self, _: str) -> None:
         self.query_one("#pod_name", expect_type=Input).value = self._reader.pod
 
-    def update_search_result_count(self, result: dict[int, int]) -> None:
+    def update_search_result_count(
+        self, result: dict[LogDataIndex, OccurrenceCount]
+    ) -> None:
         total_count = sum(
             (search_result_count for search_result_count in result.values())
         )
@@ -132,18 +139,15 @@ class LogControl(Widget):
             Label("namespace: "),
             Input(self._reader.namespace, id="namespace", classes="small_input"),
             Label("logtail"),
-            Input(str(self._reader.tail), id="tail", classes="small_input small_width"),
+            Input(str(self._reader.tail), id="tail", classes="small_input"),
         )
         yield Horizontal(
             Label("pod name: "),
             Input(self._reader.pod, id="pod_name", classes="small_input"),
             Label("search"),
-            Input(
-                self._reader.highlight_text,
-                id="search",
-                classes="small_input small_width",
-            ),
+            Input(self._reader.highlight_text, id="search", classes="small_input"),
             Label("0", id="search_results"),
+            Button("next", id="navigate_to_next_search_result"),
         )
         yield Horizontal(
             Button("log", id="startlog"),
@@ -264,10 +268,6 @@ class LogData:
 
         self._lines = list(self._render(search_text, line_length, selected_style))
         self._state = new_state
-
-
-LogDataLineIndex = int
-LogDataIndex = int
 
 
 class LineCache:
@@ -556,13 +556,13 @@ class LogOutput(ScrollView, can_focus=True):
         self.refresh()
 
     def search_log_items(self, search_text: str) -> None:
-        async def _search_task() -> dict[int, int]:
-            # mappable with the key as the log_item index, the amount of
-            # occurrences of the search_text.
+        async def _search_task() -> dict[LogDataIndex, OccurrenceCount]:
             if search_text == "":
                 return {}
 
-            search_items: dict[int, int] = {}
+            # mappable with the key as the log_item index, the amount of
+            # occurrences of the search_text.
+            search_items: dict[LogDataIndex, OccurrenceCount] = {}
 
             for idx, log_item in enumerate(self._line_cache.log_data):
                 count = log_item.search(search_text)
@@ -598,6 +598,7 @@ class LogViewer(Static, can_focus=True):
         self.reader = reader
         self._log_control = LogControl(reader)
         self._log_output = LogOutput(self.reader)
+        self._search_result: dict[LogDataIndex, OccurrenceCount]
 
     def compose(self) -> ComposeResult:
         yield self._log_control
@@ -610,6 +611,15 @@ class LogViewer(Static, can_focus=True):
             await self.action_stop_logging()
         elif event.button.id == "clearlog":
             self.action_clear_log()
+        if event.button.id == "navigate_to_next_search_result":
+            current_selected_item = self._log_output.current_row
+
+            for item in self._search_result.keys():
+                if item > current_selected_item:
+                    break
+            else:
+                return
+            self._log_output.current_row = item
 
     async def on_input_changed(self, event: Input.Changed) -> None:
         event.stop()
@@ -650,4 +660,5 @@ class LogViewer(Static, can_focus=True):
     def on_log_output_search_result_count_changed(
         self, event: LogOutput.SearchResultCountChanged
     ):
+        self._search_result = event.count
         self._log_control.update_search_result_count(event.count)
