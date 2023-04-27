@@ -75,12 +75,17 @@ class LogControl(Widget):
         dock: top;
         layout: vertical;
     }
-    .small_input {
+
+    LogControl Input {
         height: 1;
         border: none;
-        width: 50;
+        min-width: 10;
+        padding: 0;
+        margin: 0 1;
+        background: $accent-darken-2;
     }
-    .small_input:focus {
+
+    LogControl Input:focus {
         border: none;
     }
     #tail {
@@ -89,24 +94,30 @@ class LogControl(Widget):
     #search {
         width: 20;
     }
+    #namespace {
+        width: 12;
+    }
+    #pod_name {
+        width: 100%;
+    }
     LogControl Button {
-        width: auto;
-        min-width: 20;
         height: 1;
-        background: $panel;
-        color: $text;
         border: none;
         border-top: none;
         border-bottom: none;
-        /* content-align: center top; */
-        text-style: bold;
     }
 
-    LogControl Button:focus {
-        color: $secondary;
+    LogControl Button:hover {
+        border-top: none;
+    }
+
+    LogControl Button.-active {
+        border-bottom: none;
+        border-top: none;
     }
     LogControl Horizontal {
         height:auto;
+
     }
     Label {
         min-width: 12
@@ -137,15 +148,15 @@ class LogControl(Widget):
     def compose(self) -> ComposeResult:
         yield Horizontal(
             Label("namespace: "),
-            Input(self._reader.namespace, id="namespace", classes="small_input"),
-            Label("logtail"),
-            Input(str(self._reader.tail), id="tail", classes="small_input"),
+            Input(self._reader.namespace, id="namespace"),
+            Label("pod name: "),
+            Input(self._reader.pod, id="pod_name"),
         )
         yield Horizontal(
-            Label("pod name: "),
-            Input(self._reader.pod, id="pod_name", classes="small_input"),
+            Label("logtail"),
+            Input(str(self._reader.tail), id="tail"),
             Label("search"),
-            Input(self._reader.highlight_text, id="search", classes="small_input"),
+            Input(self._reader.highlight_text, id="search"),
             Label("0", id="search_results"),
             Button("next", id="navigate_to_next_search_result"),
         )
