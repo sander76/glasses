@@ -421,9 +421,13 @@ class LogOutput(ScrollView, can_focus=True):
             scroll_to = view_y_top + delta_y
             return scroll_to
 
-    def on_resize(self) -> None:
-        self._render_width = max(self.size.width, self._line_cache._max_width)
-        self.refresh()
+    @property
+    def render_width(self) -> int:
+        return max(self.size.width, self._line_cache._max_width)
+
+    # def on_resize(self) -> None:
+    #     self._render_width = max(self.size.width, self._line_cache._max_width)
+    #     self.refresh()
 
     def _scroll_cursor_into_view(self) -> None:
         """When the cursor is at a boundary of the LogOutput and moves out
@@ -492,7 +496,7 @@ class LogOutput(ScrollView, can_focus=True):
 
         return (
             self._line_cache.line(
-                log_line_idx, self._highlight_text, rich_style, self._render_width
+                log_line_idx, self._highlight_text, rich_style, self.render_width
             )
         ).crop(scroll_x, scroll_x + width)
 
@@ -503,6 +507,7 @@ class LogOutput(ScrollView, can_focus=True):
 
     def clear_log(self) -> None:
         self._line_cache = LineCache(self._console)
+        self.virtual_size = Size(0, 0)
         self.current_row = -1
         self.refresh()
 
@@ -659,6 +664,6 @@ class LogViewer(Static, can_focus=True):
 
     def on_log_output_search_result_count_changed(
         self, event: LogOutput.SearchResultCountChanged
-    ):
+    ) -> None:
         self._search_result = event.count
         self._log_control.update_search_result_count(event.count)
