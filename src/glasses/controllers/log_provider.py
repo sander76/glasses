@@ -6,7 +6,6 @@ from typing import AsyncIterator, Iterator
 
 from aiohttp import ClientResponse
 from kubernetes_asyncio import client, config
-from rich.json import JSON
 from rich.text import Text
 from textual import log
 
@@ -18,7 +17,7 @@ from glasses.reactive_model import Reactr, ReactrModel
 
 
 class LogEvent:
-    def __init__(self, raw: str | Text | JSON, parsed: Text) -> None:
+    def __init__(self, raw: str, parsed: Text) -> None:
         self.raw = raw
         self.parsed = parsed
 
@@ -46,9 +45,7 @@ class LogReader(ReactrModel):
             except JsonParseError:
                 parsed = plain_text_parser.parse(data)
                 parsed = Text.assemble(Text("[!E] ", "red"), parsed)
-                yield LogEvent(raw=Text(data), parsed=parsed)
-            else:
-                yield LogEvent(raw=JSON(data), parsed=parsed)
+            yield LogEvent(raw=data, parsed=parsed)
 
     async def _read(self) -> None:
         raise NotImplementedError()

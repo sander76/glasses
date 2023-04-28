@@ -1,11 +1,12 @@
 import asyncio
 from enum import Enum, auto
+from json import JSONDecodeError
 from typing import Iterator, NamedTuple
 
 from rich.console import Console
 from rich.json import JSON
 from rich.style import Style
-from rich.text import Lines
+from rich.text import Lines, Text
 from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -164,6 +165,7 @@ class LogControl(Widget):
             Button("log", id="startlog"),
             Button("stop", id="stoplog"),
             Button("clear log", id="clearlog"),
+            Button("save log", id="savelog"),
         )
         yield self._logging_state
 
@@ -231,11 +233,16 @@ class LogData:
         new_line = self.log_event.parsed.copy()
         if self.expanded:
 
-            new_line.append("\n")
+            new_line.append("\n\n")
             raw = self.log_event.raw
-            if isinstance(raw, JSON):
-                raw = raw.text
-            new_line.append(raw)
+
+            styled_raw: Text | str
+            try:
+                styled_raw = JSON(raw).text
+            except JSONDecodeError:
+                styled_raw = raw
+
+            new_line.append(styled_raw)
             new_line.append("\n")
 
         self._raw_lines = new_line.split(allow_blank=True)
@@ -627,6 +634,8 @@ class LogViewer(Static, can_focus=True):
             await self.action_stop_logging()
         elif event.button.id == "clearlog":
             self.action_clear_log()
+        elif event.button.id == "savelog":
+            self.action_save_log()
         if event.button.id == "navigate_to_next_search_result":
             current_selected_item = self._log_output.current_row
 
@@ -669,6 +678,10 @@ class LogViewer(Static, can_focus=True):
 
     def action_clear_log(self) -> None:
         self._log_output.clear_log()
+
+    def action_save_log(self) -> None:
+        for line in self._log_output._line_cache.log_data:
+            pass
 
     async def on_unmount(self) -> None:
         await self.reader.stop()
