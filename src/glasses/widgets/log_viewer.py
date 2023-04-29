@@ -256,8 +256,11 @@ class LogData:
         line_length: int,
         selected_style: Style,
     ) -> Iterator[Strip]:
+        # need to provide these render options. otherwise horizontal
+        # scrolling becomes erratic (random characters everywhere).
         render_options = self._console.options
         render_options = render_options.update(width=line_length, overflow="ignore")
+
         for raw_line in self._raw_lines:
             styled_line = raw_line.copy()
 
@@ -267,7 +270,7 @@ class LogData:
             styled_line.align("left", line_length)
 
             if self.selected:
-                styled_line.stylize(selected_style)
+                styled_line.stylize(selected_style.background_style)
 
             yield Strip(self._console.render(styled_line, render_options), line_length)
 
