@@ -256,6 +256,8 @@ class LogData:
         line_length: int,
         selected_style: Style,
     ) -> Iterator[Strip]:
+        render_options = self._console.options
+        render_options = render_options.update(width=line_length, overflow="ignore")
         for raw_line in self._raw_lines:
             styled_line = raw_line.copy()
 
@@ -266,7 +268,8 @@ class LogData:
 
             if self.selected:
                 styled_line.stylize(selected_style)
-            yield Strip(self._console.render(styled_line), line_length)
+
+            yield Strip(self._console.render(styled_line, render_options), line_length)
 
     def update(
         self,
