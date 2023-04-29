@@ -1,6 +1,7 @@
 import asyncio
 from enum import Enum, auto
 from json import JSONDecodeError
+from pathlib import Path
 from typing import Iterator, NamedTuple
 
 from rich.console import Console
@@ -246,7 +247,7 @@ class LogData:
             new_line.append("\n")
 
         self._raw_lines = new_line.split(allow_blank=True)
-        self._max_width = max((len(line.plain) for line in self._raw_lines))
+        self._max_width = max((len(line) for line in self._raw_lines))
         self.line_count = len(self._raw_lines)
 
     def _render(
@@ -601,8 +602,6 @@ class LogOutput(ScrollView, can_focus=True):
                 count = {}
             self.post_message(self.SearchResultCountChanged(count))
 
-        # if search_text == "":
-        #     self.post_message(self.SearchResultCountChanged({}))
         if self._search_text_task is not None:
             self._search_text_task.cancel()
 
@@ -680,8 +679,13 @@ class LogViewer(Static, can_focus=True):
         self._log_output.clear_log()
 
     def action_save_log(self) -> None:
-        for line in self._log_output._line_cache.log_data:
-            pass
+        with open(Path.home() / "log_output.txt", "w") as file:
+            lines = (
+                log_data.log_event.raw
+                for log_data in self._log_output._line_cache.log_data
+            )
+
+            file.writelines("\n".join(lines))
 
     async def on_unmount(self) -> None:
         await self.reader.stop()
