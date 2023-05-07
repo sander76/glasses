@@ -78,7 +78,7 @@ async def test_single_log_event__get_lines__returns_rendered_line(console):
 
     await line_cache.add_log_events(log_events)
 
-    line_1 = line_cache.line(0, "", Style(bgcolor="blue"))
+    line_1 = line_cache.line(0, "", Style(bgcolor="blue"), 10)
 
     assert line_1 == Strip([Segment("First line"), Segment("\n")], 10)
 
@@ -91,8 +91,8 @@ async def test_multiline_log_events__get_lines__correct_result(console):
 
     await line_cache.add_log_events(log_events)
 
-    line_0 = line_cache.line(0, "", irrelevant_style)
-    line_1 = line_cache.line(1, "", irrelevant_style)
+    line_0 = line_cache.line(0, "", irrelevant_style, 5)
+    line_1 = line_cache.line(1, "", irrelevant_style, 5)
 
     assert len(line_cache._log_lines_idx__log_data_idx) == 2
     assert line_0 == Strip([Segment("Two  "), Segment("\n")], 5)
@@ -112,25 +112,26 @@ async def test_single_log_event__expand_and_unexpand__correct_result(console):
     await line_cache.add_log_events(log_events)
 
     lines = [
-        line_cache.line(idx, "", irrelevant_style)
+        line_cache.line(idx, "", irrelevant_style, 14)
         for idx in range(line_cache.line_count)
     ]
 
     line_cache.toggle_expand(0)
 
     lines = [
-        line_cache.line(idx, "", irrelevant_style)
+        line_cache.line(idx, "", irrelevant_style, 14)
         for idx in range(line_cache.line_count)
     ]
     assert lines == [
         Strip([Segment("First line    "), Segment("\n")], 14),
+        Strip([Segment("              "), Segment("\n")], 14),
         Strip([Segment("Raw First line"), Segment("\n")], 14),
         Strip([Segment("              "), Segment("\n")], 14),
     ]
 
     line_cache.toggle_expand(0)
     lines = [
-        line_cache.line(idx, "", irrelevant_style)
+        line_cache.line(idx, "", irrelevant_style, 10)
         for idx in range(line_cache.line_count)
     ]
     assert lines == [
@@ -146,26 +147,26 @@ async def test_single_log_event__select_and_unselect__correct_result(console):
     line_cache = LineCache(console)
 
     await line_cache.add_log_events(log_events)
+    log_data = line_cache.log_data[0]
+    log_data.selected = True
 
     line_1 = line_cache.line(
         0,
         "",
         selected_style,  # use this style to highlight te selection.
-        selected=True,  # mark it selected
-        console_width=20,
-        expanded=False,
+        line_length=20,
     )
 
     assert line_1 == Strip(
         [Segment("First line          ", selected_style), Segment("\n")], 20
     )
+
+    log_data.selected = False
     line_1 = line_cache.line(
         0,
         "",
         selected_style,  # use this style to highlight te selection.
-        selected=False,  # mark it selected
-        console_width=20,
-        expanded=False,
+        line_length=20,
     )
     assert line_1 == Strip(
         [Segment("First line          "), Segment("\n")], 20
