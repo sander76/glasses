@@ -412,7 +412,7 @@ class LogOutput(ScrollView, can_focus=True):
             super().__init__()
 
     def __init__(self, reader: LogReader) -> None:
-        super().__init__()
+        super().__init__(classes="focusable")
         self._reader = reader
         self._highlight_text: str = ""
         self._render_width: int = -1
@@ -627,6 +627,10 @@ class LogViewer(Static, can_focus=True):
         self._log_control = LogControl(reader)
         self._log_output = LogOutput(self.reader)
         self._search_result: dict[LogDataIndex, OccurrenceCount]
+
+    @property
+    def log_output(self) -> LogOutput:
+        return self.query_one("LogOutput", expect_type=LogOutput)
 
     def compose(self) -> ComposeResult:
         yield self._log_control

@@ -42,6 +42,8 @@ class TheApp(Widget):
     def watch_show_sidebar(self, show_sidebar: bool) -> None:
         """Called when show_sidebar var value has changed."""
         self.set_class(show_sidebar, "-show-sidebar")
+        if not self.show_sidebar:
+            self._log_viewer.log_output.focus()
 
     def __init__(self) -> None:
         super().__init__()

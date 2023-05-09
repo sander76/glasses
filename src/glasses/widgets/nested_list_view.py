@@ -68,16 +68,16 @@ class UpdateableListView(Widget):
     DEFAULT_CSS = """
     UpdateableListView {
         layout: vertical;
-        overflow-y: auto;
     }
-    ListView {
-        height: auto;
+
+    .item {
+        background: $background-darken-3 0%;
     }
     """
 
     def __init__(self, item: BaseK8, id: str) -> None:
         super().__init__(id=id)
-        self._listview = ListView()
+        self._listview = ListView(classes="focusable")
         self._filter = Input(placeholder="filter text")
         self._title = Label("no title")
 
@@ -109,7 +109,9 @@ class UpdateableListView(Widget):
         self._listview.append(ListItem(Label(" [Refresh]"), id="update_view"))
 
         for item in self._item.filter_items():
-            self._listview.append(ListItem(Label(item.label), id=item.name))
+            self._listview.append(
+                ListItem(Label(item.label), id=item.name, classes="item")
+            )
         for cmd in self._item.commands:
             self._listview.append(
                 ListItem(Label(f" \[{cmd.value}]"), id=cmd.name)  # noqa

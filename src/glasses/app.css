@@ -14,7 +14,8 @@ TheApp.-show-sidebar #sidebar {
 
 #sidebar {
     dock: left;
-    width: 50%;
+    max-width: 50%;
+    width: 70;
     height: 100%;
     display: none;
     overflow: auto;
@@ -52,4 +53,12 @@ LogViewer {
 
     margin: 1;
 
+}
+
+.focusable {
+    background: $background-darken-3;
+}
+
+.focusable:focus {
+    background: $background !important;
 }
