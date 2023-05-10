@@ -450,10 +450,6 @@ class LogOutput(ScrollView, can_focus=True):
     def render_width(self) -> int:
         return max(self.size.width, self._line_cache._max_width)
 
-    # def on_resize(self) -> None:
-    #     self._render_width = max(self.size.width, self._line_cache._max_width)
-    #     self.refresh()
-
     def _scroll_cursor_into_view(self) -> None:
         """When the cursor is at a boundary of the LogOutput and moves out
         of view, this method handles scrolling to ensure it remains visible."""

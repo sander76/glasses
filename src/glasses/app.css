@@ -1,14 +1,10 @@
 Viewer {
     width: 100%;
-    layers: viewer modal;
     align: center middle;
 }
 
-TheApp {
-    layer: viewer;
-}
 
-TheApp.-show-sidebar #sidebar {
+.-show-sidebar #sidebar {
     display: block
 }
 

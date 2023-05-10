@@ -15,7 +15,6 @@ from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
 from glasses.settings import LogCollectors, NameSpaceProvider
 from glasses.widgets.dialog import QuitScreen
 from glasses.widgets.log_viewer import LogViewer
-from glasses.widgets.modal import HelpView
 from glasses.widgets.nested_list_view import NestedListView
 
 Provider = TypeVar("Provider", NameSpace, Cluster)
@@ -26,63 +25,48 @@ Provider = TypeVar("Provider", NameSpace, Cluster)
 
 
 class SideBar(Widget):
-    """Namespaces view."""
+    """Sidebar view."""
 
     def compose(self) -> ComposeResult:
         yield NestedListView(dependencies.get_namespace_provider())
 
 
-class TheApp(Widget):
-    BINDINGS = [
-        Binding("ctrl+b", "toggle_sidebar", "Toggle sidebar"),
-    ]
+class Viewer(App):
+    """An app to view logging."""
 
     show_sidebar = var(True)
+
+    CSS_PATH = "app.css"
+    BINDINGS = [
+        Binding("d", "toggle_dark", "Toggle dark mode", show=False),
+        Binding("ctrl+b", "toggle_sidebar", "Toggle sidebar"),
+    ]
 
     def watch_show_sidebar(self, show_sidebar: bool) -> None:
         """Called when show_sidebar var value has changed."""
         self.set_class(show_sidebar, "-show-sidebar")
         if not self.show_sidebar:
-            self._log_viewer.log_output.focus()
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._log_viewer = LogViewer(dependencies.get_log_reader())
-        self._sidebar = SideBar(id="sidebar")
+            viewer = self.query_one("LogViewer", expect_type=LogViewer)
+            viewer.log_output.focus()
 
     def compose(self) -> ComposeResult:
-        yield self._sidebar
-        yield self._log_viewer
+        yield SideBar(id="sidebar")
+        yield LogViewer(dependencies.get_log_reader())
         yield Footer()
+
+    def action_toggle_dark(self) -> None:
+        self.dark = not self.dark
 
     async def on_nested_list_view_command(self, event: NestedListView.Command) -> None:
         if event.id == Commands.VIEW_LOG:
 
             pod = event.data
             assert isinstance(pod, Pod)
-            await self._log_viewer.start(pod)
+            viewer = self.query_one("LogViewer", expect_type=LogViewer)
+            await viewer.start(pod)
 
     def action_toggle_sidebar(self) -> None:
         self.show_sidebar = not self.show_sidebar
-
-
-class Viewer(App):
-    """An app to view logging."""
-
-    CSS_PATH = "app.css"
-    BINDINGS = [
-        Binding("d", "toggle_dark", "Toggle dark mode", show=False),
-        ("h", "view_help", "help"),
-    ]
-
-    def compose(self) -> ComposeResult:
-        yield TheApp()
-
-    def action_toggle_dark(self) -> None:
-        self.dark = not self.dark
-
-    def action_view_help(self) -> None:
-        self.mount(HelpView(bindings=self.BINDINGS))
 
     async def action_quit(self) -> None:
         self.push_screen(QuitScreen())
