@@ -17,7 +17,6 @@ class _Reader:
         return self._current_idx == len(self._watch_items)
 
     async def readline(self) -> bytes:
-
         item = self._watch_items[self._current_idx]
         self._current_idx += 1
 
@@ -86,7 +85,7 @@ async def test_read_timeout__read_log__should_retry() -> None:
         )
     )
     try:
-        await log_reader.print_pod_log()
+        await log_reader._print_pod_log()
     except asyncio.CancelledError:
         print("finished")
 
@@ -111,7 +110,7 @@ async def test_normal_read__read_log__no_entries_are_duplicate() -> None:
     )
 
     try:
-        await log_reader.print_pod_log()
+        await log_reader._print_pod_log()
     except asyncio.CancelledError:
         print("finsihed")
 
@@ -136,7 +135,7 @@ async def test_empty_first_read__read_log__should_stream_all_messages() -> None:
     )
 
     try:
-        await log_reader.print_pod_log()
+        await log_reader._print_pod_log()
     except asyncio.CancelledError:
         print("finsihed")
 
@@ -159,7 +158,7 @@ async def test_non_overlapping_log_messages__read_log__should_have_warning_messa
     )
 
     try:
-        await log_reader.print_pod_log()
+        await log_reader._print_pod_log()
     except asyncio.CancelledError:
         print("finsihed")
 
@@ -195,7 +194,7 @@ async def test_watch_log_lines_fully_overlap_first_run_items__read_log__should_n
     )
 
     try:
-        await log_reader.print_pod_log()
+        await log_reader._print_pod_log()
     except asyncio.CancelledError:
         print("finsihed")
 

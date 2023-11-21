@@ -20,14 +20,11 @@ def fix_quality(session):
     if not skip_sync:
         session.run("poetry", "install", "--sync", external=True)
 
-    session.run("black", PROJECT_FOLDER)
-    session.run("black", "tests")
-
     session.run("ruff", PROJECT_FOLDER, "--fix")
     session.run("ruff", "tests", "--fix")
 
-    session.run("isort", PROJECT_FOLDER)
-    session.run("isort", "tests")
+    session.run("black", PROJECT_FOLDER)
+    session.run("black", "tests")
 
 
 @nox.session
@@ -41,13 +38,7 @@ def quality(session):
     session.run("black", PROJECT_FOLDER, "--check")
     session.run("black", "tests", "--check")
 
-    session.run("flake8", PROJECT_FOLDER)
-    session.run("flake8", "tests")
-
     session.run("mypy", PROJECT_FOLDER)
-
-    session.run("isort", PROJECT_FOLDER, "--check-only")
-    session.run("isort", "tests", "--check-only")
 
 
 @nox.session

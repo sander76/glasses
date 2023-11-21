@@ -18,7 +18,6 @@ async def dummylogger():
 
 @pytest.mark.asyncio
 async def test_dummy_log_provider__returns_valid_data(dummylogger):
-
     first_item = await anext(dummylogger.read())
 
     assert isinstance(first_item, LogEvent)

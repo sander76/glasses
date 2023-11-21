@@ -10,6 +10,7 @@ class ModalView(Widget):
         align: center middle;
         height: 100%;
         width: 100%;
+        background: red;
     }
     """
 

@@ -5,15 +5,13 @@ from typing import Sequence, TypeVar
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.reactive import var
-from textual.widget import Widget
-from textual.widgets import Footer
+from textual.widgets import ContentSwitcher, Footer
 
 from glasses import dependencies
 from glasses.logger import setup_logging
-from glasses.namespace_provider import Cluster, Commands, NameSpace, Pod
+from glasses.namespace_provider import Cluster, NameSpace
 from glasses.settings import LogCollectors, NameSpaceProvider
-from glasses.widgets.dialog import QuitScreen
+from glasses.widgets.dialog import QuestionDialog
 from glasses.widgets.log_viewer import LogViewer
 from glasses.widgets.nested_list_view import NestedListView
 
@@ -24,52 +22,43 @@ Provider = TypeVar("Provider", NameSpace, Cluster)
 # TODO: Remove first layer from app as it is not needed anymore. (modal screens are displayed in another, more direct way.)
 
 
-class SideBar(Widget):
-    """Sidebar view."""
-
-    def compose(self) -> ComposeResult:
-        yield NestedListView(dependencies.get_namespace_provider())
-
-
 class Viewer(App):
     """An app to view logging."""
 
-    show_sidebar = var(True)
-
-    CSS_PATH = "app.css"
+    CSS_PATH = "app.tcss"
     BINDINGS = [
         Binding("d", "toggle_dark", "Toggle dark mode", show=False),
-        Binding("ctrl+b", "toggle_sidebar", "Toggle sidebar"),
+        Binding("n", "select_namespaces", "namespaces"),
     ]
 
-    def watch_show_sidebar(self, show_sidebar: bool) -> None:
-        """Called when show_sidebar var value has changed."""
-        self.set_class(show_sidebar, "-show-sidebar")
-        if not self.show_sidebar:
-            viewer = self.query_one("LogViewer", expect_type=LogViewer)
-            viewer.log_output.focus()
-
     def compose(self) -> ComposeResult:
-        yield SideBar(id="sidebar")
-        yield LogViewer(dependencies.get_log_reader())
-        yield Footer()
+        with ContentSwitcher(initial="namespaces"):
+            yield NestedListView(id="namespaces")
+            yield LogViewer(dependencies.get_log_reader())
+        yield Footer()  # contains the bindings.
 
     def action_toggle_dark(self) -> None:
         self.dark = not self.dark
 
-    async def on_nested_list_view_command(self, event: NestedListView.Command) -> None:
-        if event.id == Commands.VIEW_LOG:
+    async def on_nested_list_view_selected(
+        self, event: NestedListView.Selected
+    ) -> None:
+        self.query_one(ContentSwitcher).current = "log-viewer"
+        viewer = self.query_one("LogViewer", expect_type=LogViewer)
 
-            pod = event.data
-            assert isinstance(pod, Pod)
-            viewer = self.query_one("LogViewer", expect_type=LogViewer)
-            await viewer.start(pod)
-
-    def action_toggle_sidebar(self) -> None:
-        self.show_sidebar = not self.show_sidebar
+        viewer.reader.pod = event.data.name
+        viewer.reader.namespace = event.data.namespace
+        await viewer.start()
 
     async def action_quit(self) -> None:
-        self.push_screen(QuitScreen())
+        def _exit(answer: bool) -> None:
+            if answer:
+                self.app.exit()
+
+        self.push_screen(QuestionDialog("Quit?"), _exit)
+
+    async def action_select_namespaces(self) -> None:
+        self.query_one(ContentSwitcher).current = "namespaces"
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -83,9 +72,6 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
     args = parser.parse_args(argv)
     return args
-
-
-app = Viewer()
 
 
 def run(argv: Sequence[str] | None = None) -> None:
@@ -103,10 +89,8 @@ def run(argv: Sequence[str] | None = None) -> None:
 
     setup_logging(glasses_folder)
 
-    app = Viewer()
-
-    app.run()
-
 
 if __name__ == "__main__":
     run()
+    app = Viewer()
+    app.run()

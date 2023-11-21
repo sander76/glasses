@@ -5,8 +5,8 @@ from glasses.reactive_model import Reactr, ReactrModel
 
 
 class Model(ReactrModel):
-    value1 = Reactr(10)
-    value2 = Reactr(12)
+    value1 = Reactr[int](10)
+    value2 = Reactr[int](12)
 
 
 class Controller:

@@ -1,6 +1,7 @@
 import asyncio
 from collections import deque
 from enum import Enum, auto
+from itertools import cycle
 from pathlib import Path
 from typing import AsyncIterator, Iterator
 
@@ -26,9 +27,8 @@ class LogReader(ReactrModel):
     namespace: Reactr[str] = Reactr("no namespace")
     pod = Reactr("no pod")
     tail = Reactr[int](500)
-    highlight_text = Reactr[str]("")
 
-    is_reading = Reactr(False)
+    is_reading: bool = False
 
     def __init__(self) -> None:
         super().__init__()
@@ -51,11 +51,12 @@ class LogReader(ReactrModel):
         raise NotImplementedError()
 
     def start(self) -> asyncio.Task:
-
+        self.is_reading = True
         self._reader = asyncio.create_task(self._read())
         return self._reader
 
     async def stop(self) -> None:
+        self.is_reading = False
         if self._reader:
             self._reader.cancel()
             await self._reader
@@ -82,27 +83,23 @@ class K8LogReader(LogReader):
         self._client = client
 
     async def _read(self) -> None:
-
         if not self._configured:
             await config.load_kube_config()
             self._configured = True
         if self._client is None:
             self._client = client.CoreV1Api()
 
-        self.is_reading = True
         try:
-            await self.print_pod_log()
+            await self._print_pod_log()
         except asyncio.CancelledError:
             log("stopped reading the log.")
-            self.is_reading = False
         except Exception:
             log("an unknown problem occurred while reading the log.")
-
-            self.is_reading = False
             raise
+        finally:
+            self.is_reading = False
 
-    async def print_pod_log(self) -> None:
-
+    async def _print_pod_log(self) -> None:
         last_lines: deque[bytes] = deque(maxlen=10)
 
         def _add_to_queue(data: bytes) -> None:
@@ -178,24 +175,20 @@ class K8LogReader(LogReader):
 class DummyLogReader(LogReader):
     def __init__(self) -> None:
         super().__init__()
-        self.delay: float = 0.001
-        self.range: int = 1
+        self.delay: float = 0.5
+        # self.range: int = 1
 
     def log_data(self) -> Iterator:
-        # log_data = Path(__file__).parent / "log_data.txt"
         log_data = Path(__file__).parent.parent.parent.parent / "log_output.txt"
         with open(log_data) as fl:
             data = fl.read().split("\n")
-        for i in range(self.range):
-            yield from data
+        # for i in range(self.range):
+        yield from data
 
     async def _read(self) -> None:
-        self.is_reading = True
         try:
-            for line in self.log_data():
-
+            for line in cycle(self.log_data()):
                 await asyncio.sleep(self.delay)
                 await self._stream.put(line)
         except asyncio.CancelledError:
-            self.is_reading = False
             log.info("stopped logger input")

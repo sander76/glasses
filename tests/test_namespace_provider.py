@@ -7,7 +7,13 @@ CURRENT_DATE = datetime.now()
 
 
 def test_pod_label():
-    pod = Pod("short name", "irrelevant_namespace", Mock(), CURRENT_DATE)
+    pod = Pod(
+        "short name",
+        parent=None,
+        namespace="irrelevant_namespace",
+        client=Mock(),
+        creation_timestamp=CURRENT_DATE,
+    )
     result = f"> short name  [{CURRENT_DATE.strftime(Pod.DATETIME_OUTPUT)}]"
 
     label = pod.label

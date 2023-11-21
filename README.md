@@ -30,3 +30,10 @@ tail -f glasses.log
 ## todo:
 
 A lot of things. This needs some serious refactoring still. PR's are welcome !
+
+## Development
+
+Running in dev mode:
+`textual run --dev src/glasses/app.py`
+
+`textual console`

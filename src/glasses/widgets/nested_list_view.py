@@ -1,123 +1,86 @@
 import asyncio
 
 from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import Vertical
 from textual.message import Message
-from textual.widget import Widget
 from textual.widgets import Input, Label, ListItem, ListView
 
-from glasses.namespace_provider import BaseK8, Cluster, Commands
+from glasses import dependencies
+from glasses.namespace_provider import BaseK8, Pod
 
 
-class NestedListView(Widget):
-    def __init__(self, tree_data: Cluster) -> None:
-        super().__init__()
-        self.history: list[BaseK8] = [tree_data]
-        self._updateable_list_view = UpdateableListView(tree_data, id="nested_list")
+class NestedListView(Vertical):
+    _resource: BaseK8
+    _delay_update_task: asyncio.Task | None = None
+
+    BINDINGS = [Binding("b", "back", "back"), Binding("f", "filter", "filter")]
 
     def compose(self) -> ComposeResult:
-        yield self._updateable_list_view
+        yield Label("main", id="title")
+        yield Input(placeholder="filter text", id="filter")
+        yield ListView(classes="focusable", id="resources")
 
     async def on_mount(self) -> None:
-        await self.update_view(refresh=True)
-
-    async def update_view(self, refresh: bool = True) -> None:
-        await self._updateable_list_view.update(self.history[-1], refresh)
-
-    async def _navigate_back(self) -> None:
-        if len(self.history) == 1:
-            return
-        self.history.pop()
-        await self.update_view()
-
-    async def _new_view(self, item_id: str) -> None:
-        new_view = self.history[-1].items[item_id]
-        self.history.append(new_view)
-        await self.update_view()
-
-    async def on_list_view_selected(self, event: ListView.Selected) -> None:
-        id = event.item.id
-        assert isinstance(id, str)
-        if id == "update_view":
-            await self.update_view(refresh=True)
-        elif id == "navigate_back":
-            await self._navigate_back()
-        elif self.history[-1].items and id in self.history[-1].items:
-            await self._new_view(id)
-        elif Commands[id] in self.history[-1].commands:
-            self.post_message(
-                NestedListView.Command(data=self.history[-1], id=Commands[id])
-            )
-            print("sent")
-        else:
-            print("nothing found.")
-
-    class Selected(Message):
-        def __init__(self, data: BaseK8, id: str) -> None:
-            self.data = data
-            self.id = id
-            super().__init__()
-
-    class Command(Message):
-        def __init__(self, data: BaseK8, id: Commands) -> None:
-            self.data = data
-            self.id = id
-            super().__init__()
-
-
-class UpdateableListView(Widget):
-    DEFAULT_CSS = """
-    UpdateableListView {
-        layout: vertical;
-    }
-
-    .item {
-        background: $background-darken-3 0%;
-    }
-    """
-
-    def __init__(self, item: BaseK8, id: str) -> None:
-        super().__init__(id=id)
-        self._listview = ListView(classes="focusable")
-        self._filter = Input(placeholder="filter text")
-        self._title = Label("no title")
-
-        self._item: BaseK8 = item
-        self._delay_update_task: asyncio.Task | None = None
+        resource = dependencies.get_namespace_provider()
+        await self.update_view(resource, refresh=True)
 
     async def on_show(self) -> None:
-        self._listview.focus()
+        self.query_one("#resources").focus()
 
-    def compose(self) -> ComposeResult:
-        yield self._title
-        yield self._filter
-        yield self._listview
+    async def update_view(self, resource: BaseK8, refresh: bool = True) -> None:
+        """Update the view with the latest resource data.
 
-    async def update(self, view_item_data: BaseK8, refresh: bool = True) -> None:
-        self._item = view_item_data
+        Args:
+            resource: a k8 resource, like a namespace or pod.
+            refresh: query the api to refresh the resource. Defaults to True.
+        """
+        self._resource = resource
+        _list_view = self.query_one("#resources", expect_type=ListView)
+
         if refresh:
-            await self._item.refresh()
+            await resource.refresh()
 
-        await self._update()
+        (self.query_one("#title", expect_type=Label)).update(resource.name)
+        (self.query_one("#filter", expect_type=Input)).value = resource.filter_text
 
-    async def _update(self) -> None:
-        self._title.update(self._item.name)
-        self._filter.value = self._item.filter_text
+        await _list_view.clear()
 
-        await self._listview.clear()
+        for item in resource.filter_items():
+            _list_view.append(ListItem(Label(item.label), id=item.name, classes="item"))
 
-        self._listview.append(ListItem(Label(" <Back"), id="navigate_back"))
-        self._listview.append(ListItem(Label(" [Refresh]"), id="update_view"))
+    async def action_filter(self) -> None:
+        self.query_one("#filter").focus()
 
-        for item in self._item.filter_items():
-            self._listview.append(
-                ListItem(Label(item.label), id=item.name, classes="item")
-            )
-        for cmd in self._item.commands:
-            self._listview.append(
-                ListItem(Label(f" \[{cmd.value}]"), id=cmd.name)  # noqa
-            )
+    async def action_back(self) -> None:
+        if self._resource.parent is None:
+            return
+        await self.update_view(self._resource.parent)
 
-    def update_with_delay(self) -> None:
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """User pressed enter inside the filter input.
+
+        Focus on the list view again."""
+        (self.query_one("#resources", expect_type=ListView)).focus()
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """User has selected a resource.
+
+        Checking whether it is a selection to use or whether to get the children and proceed.
+        """
+        id = event.item.id
+
+        selected_resource = self._resource.items[id]
+
+        if isinstance(selected_resource, Pod):
+            self.post_message(NestedListView.Selected(data=selected_resource))
+            print("sent")
+        else:
+            await self.update_view(selected_resource, refresh=True)
+
+        event.stop()
+
+    def _update_with_delay(self) -> None:
         """Update the ui after a delay
 
         Prevent updating the UI too much when enter keys into the filter.
@@ -127,24 +90,28 @@ class UpdateableListView(Widget):
 
         async def delayed_update() -> None:
             try:
-                await asyncio.sleep(0.4)
-                await self._update()
+                await asyncio.sleep(0.1)
+                await self.update_view(resource=self._resource, refresh=False)
             except asyncio.CancelledError:
                 pass
 
         self._delay_update_task = asyncio.create_task(delayed_update())
 
     async def on_input_changed(self, event: Input.Changed) -> None:
-        if self._item.filter_text == event.value:
+        if self._resource.filter_text == event.value:
+            # filter not changed. Do nothing
             return
 
-        self._item.filter_text = event.value
+        self._resource.filter_text = event.value
 
-        self.update_with_delay()
+        self._update_with_delay()
+        event.stop()
 
     async def on_unmount(self) -> None:
         if self._delay_update_task:
             self._delay_update_task.cancel()
 
-    def on_mount(self) -> None:
-        self._listview.focus()
+    class Selected(Message):
+        def __init__(self, data: Pod) -> None:
+            self.data = data
+            super().__init__()

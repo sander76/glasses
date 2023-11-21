@@ -19,12 +19,12 @@ class Commands(Enum):
 
 
 class BaseK8(ABC, Generic[ItemType]):
-    def __init__(self, name: str, client: BaseClient) -> None:
+    def __init__(self, name: str, parent: BaseK8 | None, client: BaseClient) -> None:
         self.name = name
         self._items: dict[str, ItemType] = {}
         self._client = client
-        self.commands: set[Commands] = set()
         self.filter_text: str = ""
+        self.parent = parent
 
     @abstractmethod
     async def refresh(self) -> dict[str, ItemType]:
@@ -54,14 +54,14 @@ class Pod(BaseK8):
     def __init__(
         self,
         name: str,
+        parent: BaseK8,
         namespace: str,
         client: BaseClient,
         creation_timestamp: datetime,
     ) -> None:
         self.namespace = namespace
         self.creation_timestamp = creation_timestamp
-        super().__init__(name, client)
-        self.commands = {Commands.VIEW_LOG}
+        super().__init__(name, parent=parent, client=client)
 
     async def refresh(self) -> dict[str, Any]:
         return self.items
@@ -82,7 +82,7 @@ class NameSpace(BaseK8[Pod]):
     """A k8s namespace"""
 
     async def refresh(self) -> dict[str, Pod]:
-        self._items = await self._client.get_resources(self.name)
+        self._items = await self._client.get_resources(parent=self, namespace=self.name)
         return self._items
 
 
@@ -90,9 +90,9 @@ class Cluster(BaseK8[NameSpace]):
     """A k8s cluster"""
 
     def __init__(self, name: str, client: BaseClient) -> None:
-        super().__init__(name, client=client)
+        super().__init__(name, parent=None, client=client)
 
     async def refresh(self) -> dict[str, NameSpace]:
-        data = await self._client.get_namespaces()
+        data = await self._client.get_namespaces(parent=self)
         self._items = data
         return self._items

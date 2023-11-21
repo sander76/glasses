@@ -15,6 +15,8 @@ class Reactr(Generic[ReactrType]):
         self.name = name
 
     def __get__(self, obj: ReactrModel, type: type[ReactrModel]) -> ReactrType:
+        if obj is None:
+            pass
         return obj.__dict__.get(self.name) or self._default
 
     def __set__(self, obj: ReactrModel, value: ReactrType) -> None:

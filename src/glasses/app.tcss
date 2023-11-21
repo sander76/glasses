@@ -1,0 +1,66 @@
+
+NestedListView {
+    width: 100%;
+    height: auto;
+}
+
+.logging {
+    background: $success;
+}
+
+.not_logging {
+    background: $warning;
+}
+
+.dialog {
+    align: center middle;
+
+}
+
+.dialog #dialog {
+    padding: 1 2;
+    width: 60;
+    border: thick $background 80%;
+    background: $surface;
+    height: auto;
+}
+
+.dialog #question {
+    width:100%;
+    content-align: center middle;
+    margin: 1;
+}
+.dialog Container {
+    background:red;
+    width: 100%;
+    layout: horizontal;
+    align: right top;
+    height: auto;
+
+}
+.dialog Button {
+    width: auto;
+    margin:1;
+}
+
+.search {
+    height: auto;
+    background:blue;
+}
+.search Input {
+    width: 40%;
+    border: none;
+    border-bottom: wide $panel-darken-3;
+    padding: 0;
+    margin: 0 1;
+}
+.search Button {
+    align:right top;
+    border-top:none;
+    border-bottom:none;
+    min-width: 3;
+    
+}
+.hide {
+    display: None;
+}

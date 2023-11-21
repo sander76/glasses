@@ -61,7 +61,6 @@ def test_message_with_long_message__returns_valid_string():
     ],
 )
 def test_message__plain_parser__returns_valid_string(input, output):
-
     result = plain_text_parser.parse(input)
 
     assert result.markup == output
