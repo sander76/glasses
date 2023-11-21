@@ -519,7 +519,7 @@ class LogViewer(Static, can_focus=True):
 
     def compose(self) -> ComposeResult:
         yield Info()
-        yield Search()
+        yield Search(classes="search hide")
         yield LoggingState()
         yield self._log_output
 
@@ -599,6 +599,11 @@ class LogViewer(Static, can_focus=True):
     async def _on_search_changed(self, event: Input.Changed) -> None:
         event.stop()
         self._log_output.highlight(event.value)
+
+    @on(Input.Submitted, "#search_input")
+    def _on_search_submitted(self, event: Input.Submitted) -> None:
+        event.stop()
+        self._log_output.focus()
 
     @on(LogOutput.SearchResultCountChanged)
     def _result_count_changed(self, event: LogOutput.SearchResultCountChanged) -> None:

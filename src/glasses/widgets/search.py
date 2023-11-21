@@ -17,12 +17,19 @@ class Search(Horizontal):
         yield Label("Search")
         yield Input("", id="search_input")
         yield Label(id="result_count")
-        yield Button(">", id="next")
         yield Button("<", id="previous")
+        yield Button(">", id="next")
 
     @cached_property
     def count_label(self) -> Label:
         return self.query_one("#result_count", expect_type=Label)
 
+    @cached_property
+    def _search_input(self) -> Input:
+        return self.query_one("#search_input", expect_type=Input)
+
     def _watch_search_count(self, value: int) -> None:
         self.count_label.update(str(value))
+
+    def on_show(self) -> None:
+        self._search_input.focus()

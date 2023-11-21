@@ -28,7 +28,7 @@ class Viewer(App):
     CSS_PATH = "app.tcss"
     BINDINGS = [
         Binding("d", "toggle_dark", "Toggle dark mode", show=False),
-        Binding("n", "select_namespaces", "namespaces"),
+        Binding("ctrl+n", "select_namespaces", "namespaces"),
     ]
 
     def compose(self) -> ComposeResult:

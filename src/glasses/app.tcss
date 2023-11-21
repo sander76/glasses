@@ -45,7 +45,6 @@ NestedListView {
 
 .search {
     height: auto;
-    background:blue;
 }
 .search Input {
     width: 40%;
